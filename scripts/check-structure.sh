@@ -6,10 +6,35 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
-ROOT=$1
-BUILD=$2
+# Make the paths absolute before the cd. A relative build dir is relative to
+# the directory of the caller, not to the source root.
+if ! ROOT=$(cd "$1" 2>/dev/null && pwd); then
+    echo "FAIL: source root $1 does not exist"
+    exit 1
+fi
+case "$2" in
+    /*) BUILD=$2 ;;
+    *) BUILD=$PWD/$2 ;;
+esac
 cd "$ROOT"
 fail=0
+
+# Each run uses its own scratch folder. Parallel runs do not share files.
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/5ed-check.XXXXXX")
+trap 'rm -rf "$TMP"' EXIT
+
+# count_sym <file> <types> <symbol>
+# Print the number of defined symbols with exactly this demangled name.
+# Compiler clones (for example "[clone .constprop.0]") do not count.
+count_sym() {
+    nm -C --defined-only "$1" | awk -v types="$2" -v sym="$3" '
+        /^[0-9a-fA-F]+ [A-Za-z] / {
+            type = $2
+            $1 = ""; $2 = ""; sub(/^ +/, "")
+            if (index(types, type) > 0 && $0 == sym) n++
+        }
+        END { print n + 0 }'
+}
 
 pass() {
     echo "PASS: $1"
@@ -21,34 +46,34 @@ fail_check() {
 }
 
 # 1. no-removed-macros
-if grep -rnE "\b(OS_WINDOWS|OS_MAC|OS_LINUX|OS_NAME|ARCH_X86|ARCH_X64|ARCH_ARM(32|64)|ARCH_(32|64)BIT|ARCH_NAME|COMPILER_(CL|GCC|CLANG|NAME)|CALL_CONVENTION|JUST_GUESS_INTS|FTECH_64_BIT|FCODER_TRANSITION_TO)\b" src CMakeLists.txt ship_files > /tmp/5ed-check-1.txt; then
+if grep -rnE "\b(OS_WINDOWS|OS_MAC|OS_LINUX|OS_NAME|ARCH_X86|ARCH_X64|ARCH_ARM(32|64)|ARCH_(32|64)BIT|ARCH_NAME|COMPILER_(CL|GCC|CLANG|NAME)|CALL_CONVENTION|JUST_GUESS_INTS|FTECH_64_BIT|FCODER_TRANSITION_TO)\b" src CMakeLists.txt ship_files > "$TMP/check-1.txt"; then
     fail_check "no-removed-macros"
-    cat /tmp/5ed-check-1.txt
+    cat "$TMP/check-1.txt"
 else
     pass "no-removed-macros"
 fi
 
 # 2. no-bat-or-other-os
-if grep -rniE "default_(compiler|flags)_bat|setup_build_bat|prj_generate_bat|\.bat\b|(^|[^A-Za-z0-9_])\.(win|mac) *=" src ship_files CMakeLists.txt > /tmp/5ed-check-2.txt; then
+if grep -rniE "default_(compiler|flags)_bat|setup_build_bat|prj_generate_bat|\.bat\b|(^|[^A-Za-z0-9_])\.(win|mac) *=" src ship_files CMakeLists.txt > "$TMP/check-2.txt"; then
     fail_check "no-bat-or-other-os"
-    cat /tmp/5ed-check-2.txt
+    cat "$TMP/check-2.txt"
 else
     pass "no-bat-or-other-os"
 fi
 
 # 3. no-ctm
 ctm_hit=0
-if grep -n "ctm" .gitignore CMakeLists.txt > /tmp/5ed-check-3a.txt; then
+if grep -n "ctm" .gitignore CMakeLists.txt > "$TMP/check-3a.txt"; then
     ctm_hit=1
 fi
-if grep -rn "\.ctm" src ship_files > /tmp/5ed-check-3b.txt; then
+if grep -rn "\.ctm" src ship_files > "$TMP/check-3b.txt"; then
     ctm_hit=1
 fi
 if [ "$ctm_hit" -eq 0 ]; then
     pass "no-ctm"
 else
     fail_check "no-ctm"
-    cat /tmp/5ed-check-3a.txt /tmp/5ed-check-3b.txt 2>/dev/null || true
+    cat "$TMP/check-3a.txt" "$TMP/check-3b.txt" 2>/dev/null || true
 fi
 
 # 4. layout
@@ -157,9 +182,9 @@ once=(
 )
 cpp_bad=0
 for name in "${once[@]}"; do
-    if grep -rn "#include \"base/${name}\"" src > /tmp/5ed-check-7.txt; then
+    if grep -rn "#include \"base/${name}\"" src > "$TMP/check-7.txt"; then
         echo "FAIL: base-cpp-not-included $name"
-        cat /tmp/5ed-check-7.txt
+        cat "$TMP/check-7.txt"
         cpp_bad=1
     fi
 done
@@ -173,7 +198,7 @@ fi
 if [ ! -f "$BUILD/lib5ed_base.a" ]; then
     fail_check "define-once missing $BUILD/lib5ed_base.a"
 else
-    nm -C --defined-only "$BUILD/lib5ed_base.a" > /tmp/5ed-base-nm.txt
+    nm -C --defined-only "$BUILD/lib5ed_base.a" > "$TMP/base-nm.txt"
     sym_ok=1
     for sym in \
         "i32_ceil32(float)" \
@@ -182,24 +207,24 @@ else
         "layout_nearest_pos_to_xy(Layout_Item_List, Vec2_f32)" \
         "log_event(Arena*, String_Const_u8, String_Const_u8, int, int, int, int)"
     do
-        count=$(grep -F -c "$sym" /tmp/5ed-base-nm.txt || true)
+        count=$(count_sym "$BUILD/lib5ed_base.a" TW "$sym")
         if [ "$count" -ne 1 ]; then
             echo "FAIL: define-once archive count $count for $sym"
             sym_ok=0
         fi
     done
-    awk '/^[0-9a-fA-F]+ [TWVDBR] / { $1=""; $2=""; sub(/^ +/, ""); print }' /tmp/5ed-base-nm.txt | grep -v '^DW\.' | sort -u > /tmp/5ed-base-syms.txt
-    : > /tmp/5ed-other-syms.txt
+    awk '/^[0-9a-fA-F]+ [TWVDBR] / { $1=""; $2=""; sub(/^ +/, ""); print }' "$TMP/base-nm.txt" | grep -v '^DW\.' | sort -u > "$TMP/base-syms.txt"
+    : > "$TMP/other-syms.txt"
     while IFS= read -r obj; do
         nm -C --defined-only "$obj" | awk '/^[0-9a-fA-F]+ [TtwWvVdDbBrR] / { $1=""; $2=""; sub(/^ +/, ""); print }'
-    done < <(find "$BUILD/CMakeFiles" -name '*.o' -not -path '*5ed_base*') | sort -u > /tmp/5ed-other-syms.txt
-    if comm -12 /tmp/5ed-base-syms.txt /tmp/5ed-other-syms.txt | grep -q .; then
+    done < <(find "$BUILD/CMakeFiles" -name '*.o' -not -path "$BUILD/CMakeFiles/5ed_base.dir/*") | sort -u > "$TMP/other-syms.txt"
+    if comm -12 "$TMP/base-syms.txt" "$TMP/other-syms.txt" | grep -q .; then
         echo "FAIL: define-once other objects define base symbols"
-        comm -12 /tmp/5ed-base-syms.txt /tmp/5ed-other-syms.txt | head -20
+        comm -12 "$TMP/base-syms.txt" "$TMP/other-syms.txt" | head -20
         sym_ok=0
     fi
     for bin in "$BUILD/5ed" "$BUILD/5ed_app.so" "$BUILD/custom_5ed.so"; do
-        count=$(nm -C --defined-only "$bin" | grep -F -c "i32_ceil32(float)" || true)
+        count=$(count_sym "$bin" TtWw "i32_ceil32(float)")
         if [ "$count" -ne 1 ]; then
             echo "FAIL: define-once $bin i32_ceil32 count $count"
             sym_ok=0
@@ -217,6 +242,31 @@ if grep -q "default_compiler_sh" ship_files/config.5ed && grep -q "default_flags
     pass "ship-files"
 else
     fail_check "ship-files"
+fi
+
+# 10. no-dynamic-export
+# The .so files must not export base functions or the per-target command map
+# functions. Each binary keeps a private copy. Exported copies can bind to the
+# copy in the other binary.
+export_bad=0
+for bin in "$BUILD/5ed_app.so" "$BUILD/custom_5ed.so"; do
+    if [ ! -f "$bin" ]; then
+        echo "FAIL: no-dynamic-export missing $bin"
+        export_bad=1
+        continue
+    fi
+    nm -D -C --defined-only "$bin" | awk '{ $1=""; $2=""; sub(/^ +/, ""); print }' | sort -u > "$TMP/dyn-syms.txt"
+    if grep -E "^(mapping_|mapping__|map_|map__|command_trigger_)" "$TMP/dyn-syms.txt" > "$TMP/dyn-bad.txt" ||
+       { [ -f "$TMP/base-syms.txt" ] && comm -12 "$TMP/base-syms.txt" "$TMP/dyn-syms.txt" > "$TMP/dyn-bad.txt" && [ -s "$TMP/dyn-bad.txt" ]; }; then
+        echo "FAIL: no-dynamic-export $bin exports:"
+        head -20 "$TMP/dyn-bad.txt"
+        export_bad=1
+    fi
+done
+if [ "$export_bad" -eq 0 ]; then
+    pass "no-dynamic-export"
+else
+    fail=1
 fi
 
 exit "$fail"

@@ -185,7 +185,28 @@ add_custom_target(regen)
 add_dependencies(regen regen-keycodes regen-system-api regen-font-api
                        regen-graphics-api regen-custom-api)
 
+# Builds every generator tool. It does not run them, so no checked-in file changes.
+add_custom_target(check-tools)
+add_dependencies(check-tools tool_lexer_gen tool_keycodes tool_system_api tool_font_api
+                             tool_graphics_api tool_api_parser tool_api_docs)
+
+# The tools link 5ed_base too, so define-once also checks their objects.
 add_custom_target(check-structure
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-structure.sh ${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}
-    DEPENDS 5ed
+    VERBATIM)
+add_dependencies(check-structure 5ed check-tools)
+
+# Parses a new project.5ed from setup_new_project, this repo's project.5ed and
+# the shipped config.5ed with the real config parser. Not part of ALL.
+add_executable(test_project_file EXCLUDE_FROM_ALL src/custom/tests/5ed_project_file_test.cpp)
+target_include_directories(test_project_file PRIVATE ${GENERATED_ROOT})
+target_link_libraries(test_project_file PRIVATE 5ed_common 5ed_base)
+# custom_5ed makes the generated command metadata that the test includes.
+add_dependencies(test_project_file custom_5ed)
+add_custom_target(check-project-file
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/test-project
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/test-project
+    COMMAND test_project_file ${CMAKE_BINARY_DIR}/test-project
+            ${PROJECT_SOURCE_DIR}/project.5ed ${PROJECT_SOURCE_DIR}/ship_files/config.5ed
+    DEPENDS test_project_file
     VERBATIM)

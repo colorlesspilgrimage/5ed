@@ -8,6 +8,10 @@
 #error 5ed_lex_get_main.cpp not correctly included.
 #endif
 
+// The generator uses printf and FILE before the stdio include near main.
+// 5ed_stringf.cpp gave this include before the base layer split.
+#include <stdio.h>
+
 #include "base/5ed_base_types.h"
 #include "base/5ed_stringf.h"
 #include "base/5ed_hash_functions.h"
