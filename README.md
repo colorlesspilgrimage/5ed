@@ -6,14 +6,17 @@ Linux (x86-64, X11/GLX) only.
 
 # Build
 
-Requires g++, and the X11, Xfixes, OpenGL (GLX) and FreeType development packages (FreeType found via pkg-config).
+Requires GCC (g++), CMake 3.20+, and the X11, Xfixes, OpenGL (GLX) and FreeType development packages.
 
-    ./build.sh          # dev build (default), or: ./build.sh opt
+    cmake -S . -B build                          # Debug by default; add -DCMAKE_BUILD_TYPE=Release for -O3
+    cmake --build build -j
     ./build/5ed
 
-The build writes `5ed`, `5ed_app.so` and `custom_5ed.so` to `build/`, together with the contents of `ship_files/` (fonts, themes, default config and bindings).
+The build writes `5ed`, `5ed_app.so` and `custom_5ed.so` to `build/`, together with the contents of `ship_files/` (fonts, themes, default config and bindings). The command table the custom layer needs is generated during the build into `build/gen/`.
 
-User configuration is read from `~/.5ed/` first, then from the directory containing the binary. Config, bindings, themes and projects are `*.5ed` files.
+Config, bindings, themes and projects are `*.5ed` files, looked up in the loaded project's directory, then `~/.5ed/`, then the directory containing the binary.
+
+Developer targets (not built by default) regenerate the checked-in files under `custom/generated/` and `generated/`: `regen` (keycodes and the system, font, graphics and custom APIs), `regen-lexer` (C++ lexer tables; its output currently differs from the checked-in `lexer_cpp.cpp`, so only run it when the lexer definition changes), and `check-api-docs` (reports undocumented Custom API functions).
 
 # Inherited problems being worked on
 

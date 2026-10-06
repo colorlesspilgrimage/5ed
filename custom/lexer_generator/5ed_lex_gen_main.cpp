@@ -3974,10 +3974,10 @@ int main(void){
     path_to_self = string_remove_last_folder(path_to_self);
     
     String_Const_u8 hand_written_h_name = push_u8_stringf(&ctx->arena,
-                                                          "%.*s4coder_lex_gen_hand_written.h",
+                                                          "%.*s5ed_lex_gen_hand_written.h",
                                                           string_expand(path_to_self));
     String_Const_u8 hand_written_name = push_u8_stringf(&ctx->arena,
-                                                        "%.*s4coder_lex_gen_hand_written.cpp",
+                                                        "%.*s5ed_lex_gen_hand_written.cpp",
                                                         string_expand(path_to_self));
     
     
