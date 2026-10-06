@@ -135,6 +135,29 @@ match_pattern(Filename_Character *name, Filename_Character *pattern){
     return(match);
 }
 
+static b32
+dir_entry_accepted(struct dirent *entry, Filename_Character *file_pattern, File_Filter *filter, int32_t *size_out, b32 *is_folder_out){
+    Filename_Character *name = entry->d_name;
+    if (!match_pattern(name, file_pattern)){
+        return(false);
+    }
+    int32_t size = 0;
+    for(;name[size];++size);
+    b32 is_folder = false;
+    if (entry->d_type == DT_LNK){
+        struct stat st;
+        if (stat(entry->d_name, &st) != -1){
+            is_folder = S_ISDIR(st.st_mode);
+        }
+    }
+    else{
+        is_folder = (entry->d_type == DT_DIR);
+    }
+    *size_out = size;
+    *is_folder_out = is_folder;
+    return(name[0] != '.' && (is_folder || filter(name, size)));
+}
+
 static Cross_Platform_File_List
 get_file_list(Arena *arena, Filename_Character *pattern, File_Filter *filter){
     if (arena == 0){
@@ -184,29 +207,13 @@ get_file_list(Arena *arena, Filename_Character *pattern, File_Filter *filter){
     for (struct dirent *entry = readdir(dir_handle);
          entry != 0;
          entry = readdir(dir_handle)){
-        Filename_Character *name = entry->d_name;
-        if (!match_pattern(name, file_pattern)){
+        int32_t size = 0;
+        b32 is_folder = false;
+        if (!dir_entry_accepted(entry, file_pattern, filter, &size, &is_folder)){
             continue;
         }
-        
-        int32_t size = 0;
-        for(;name[size];++size);
-        
-        b32 is_folder = false;
-        if (entry->d_type == DT_LNK){
-            struct stat st;
-            if (stat(entry->d_name, &st) != -1){
-                is_folder = S_ISDIR(st.st_mode);
-            }
-        }
-        else{
-            is_folder = (entry->d_type == DT_DIR);
-        }
-        
-        if (name[0] != '.' && (is_folder || filter(name, size))){
-            ++file_count;
-            character_count += size + 1;
-        }
+        ++file_count;
+        character_count += size + 1;
     }
     
     Cross_Platform_File_List list = {};
@@ -234,44 +241,29 @@ get_file_list(Arena *arena, Filename_Character *pattern, File_Filter *filter){
     for (struct dirent *entry = readdir(dir_handle);
          entry != 0;
          entry = readdir(dir_handle)){
-        Filename_Character *name = entry->d_name;
-        if (!match_pattern(name, file_pattern)){
+        int32_t size = 0;
+        b32 is_folder = false;
+        if (!dir_entry_accepted(entry, file_pattern, filter, &size, &is_folder)){
             continue;
         }
-        
-        int32_t size = 0;
-        for(;name[size];++size);
-        
-        b32 is_folder = false;
-        if (entry->d_type == DT_LNK){
-            struct stat st;
-            if (stat(entry->d_name, &st) != -1){
-                is_folder = S_ISDIR(st.st_mode);
-            }
-        }
-        else{
-            is_folder = (entry->d_type == DT_DIR);
+        Filename_Character *name = entry->d_name;
+        if (info_ptr + 1 > info_ptr_end || char_ptr + size + 1 > char_ptr_end){
+            memset(&list, 0, sizeof(list));
+            end_temp(part_reset);
+            closedir(dir_handle);
+            return(list);
         }
         
-        if (name[0] != '.' && (is_folder || filter(name, size))){
-            if (info_ptr + 1 > info_ptr_end || char_ptr + size + 1 > char_ptr_end){
-                memset(&list, 0, sizeof(list));
-                end_temp(part_reset);
-                closedir(dir_handle);
-                return(list);
-            }
-            
-            info_ptr->name = char_ptr;
-            info_ptr->len = size;
-            info_ptr->is_folder = is_folder;
-            
-            memmove(char_ptr, name, size*sizeof(*name));
-            char_ptr[size] = 0;
-            
-            char_ptr += size + 1;
-            ++info_ptr;
-            ++adjusted_file_count;
-        }
+        info_ptr->name = char_ptr;
+        info_ptr->len = size;
+        info_ptr->is_folder = is_folder;
+        
+        memmove(char_ptr, name, size*sizeof(*name));
+        char_ptr[size] = 0;
+        
+        char_ptr += size + 1;
+        ++info_ptr;
+        ++adjusted_file_count;
     }
     closedir(dir_handle);
     

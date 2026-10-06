@@ -46,15 +46,11 @@ table_free(Table_u64_u64 *table){
     block_zero_struct(table);
 }
 
+template <typename Key>
 Table_Lookup
-table_lookup(Table_u64_u64 *table, u64 key){
+table_lookup_probe(Key *keys, u32 slot_count, Key key, Key empty_key, Key erased_key){
     Table_Lookup result = {};
-    
-    if (key != table_empty_key && key != table_erased_key &&
-        table->slot_count > 0){
-        u64 *keys = table->keys;
-        u32 slot_count = table->slot_count;
-        
+    if (key != empty_key && key != erased_key && slot_count > 0){
         u32 first_index = key % slot_count;
         u32 index = first_index;
         result.hash = key;
@@ -66,14 +62,14 @@ table_lookup(Table_u64_u64 *table, u64 key){
                 result.found_erased_slot = false;
                 break;
             }
-            if (table_empty_key == keys[index]){
+            if (empty_key == keys[index]){
                 if (!result.found_erased_slot){
                     result.index = index;
                     result.found_empty_slot = true;
                 }
                 break;
             }
-            if (table_erased_key == keys[index]){
+            if (erased_key == keys[index]){
                 if (!result.found_erased_slot){
                     result.index = index;
                     result.found_erased_slot = true;
@@ -88,8 +84,12 @@ table_lookup(Table_u64_u64 *table, u64 key){
             }
         }
     }
-    
     return(result);
+}
+
+Table_Lookup
+table_lookup(Table_u64_u64 *table, u64 key){
+    return(table_lookup_probe(table->keys, table->slot_count, key, table_empty_key, table_erased_key));
 }
 
 b32
@@ -214,48 +214,7 @@ table_free(Table_u32_u16 *table){
 
 Table_Lookup
 table_lookup(Table_u32_u16 *table, u32 key){
-    Table_Lookup result = {};
-    
-    if (key != table_empty_u32_key && key != table_erased_u32_key &&
-        table->slot_count > 0){
-        u32 *keys = table->keys;
-        u32 slot_count = table->slot_count;
-        
-        u32 first_index = key % slot_count;
-        u32 index = first_index;
-        result.hash = key;
-        for (;;){
-            if (key == keys[index]){
-                result.index = index;
-                result.found_match = true;
-                result.found_empty_slot = false;
-                result.found_erased_slot = false;
-                break;
-            }
-            if (table_empty_u32_key == keys[index]){
-                if (!result.found_erased_slot){
-                    result.index = index;
-                    result.found_empty_slot = true;
-                }
-                break;
-            }
-            if (table_erased_u32_key == keys[index]){
-                if (!result.found_erased_slot){
-                    result.index = index;
-                    result.found_erased_slot = true;
-                }
-            }
-            index += 1;
-            if (index >= slot_count){
-                index = 0;
-            }
-            if (index == first_index){
-                break;
-            }
-        }
-    }
-    
-    return(result);
+    return(table_lookup_probe(table->keys, table->slot_count, key, table_empty_u32_key, table_erased_u32_key));
 }
 
 b32
@@ -554,48 +513,7 @@ table_free(Table_u64_Data *table){
 
 Table_Lookup
 table_lookup(Table_u64_Data *table, u64 key){
-    Table_Lookup result = {};
-    
-    if (key != table_empty_key && key != table_erased_key &&
-        table->slot_count > 0){
-        u64 *keys = table->keys;
-        u32 slot_count = table->slot_count;
-        
-        u32 first_index = key % slot_count;
-        u32 index = first_index;
-        result.hash = key;
-        for (;;){
-            if (key == keys[index]){
-                result.index = index;
-                result.found_match = true;
-                result.found_empty_slot = false;
-                result.found_erased_slot = false;
-                break;
-            }
-            if (table_empty_key == keys[index]){
-                if (!result.found_erased_slot){
-                    result.index = index;
-                    result.found_empty_slot = true;
-                }
-                break;
-            }
-            if (table_erased_key == keys[index]){
-                if (!result.found_erased_slot){
-                    result.index = index;
-                    result.found_erased_slot = true;
-                }
-            }
-            index += 1;
-            if (index >= slot_count){
-                index = 0;
-            }
-            if (index == first_index){
-                break;
-            }
-        }
-    }
-    
-    return(result);
+    return(table_lookup_probe(table->keys, table->slot_count, key, table_empty_key, table_erased_key));
 }
 
 b32

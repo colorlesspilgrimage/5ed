@@ -20,21 +20,23 @@ fail_check() {
     fail=1
 }
 
+require_no_grep() {
+    name=$1
+    shift
+    out="/tmp/5ed-check-${name}.txt"
+    if grep "$@" > "$out"; then
+        fail_check "$name"
+        cat "$out"
+    else
+        pass "$name"
+    fi
+}
+
 # 1. no-removed-macros
-if grep -rnE "\b(OS_WINDOWS|OS_MAC|OS_LINUX|OS_NAME|ARCH_X86|ARCH_X64|ARCH_ARM(32|64)|ARCH_(32|64)BIT|ARCH_NAME|COMPILER_(CL|GCC|CLANG|NAME)|CALL_CONVENTION|JUST_GUESS_INTS|FTECH_64_BIT|FCODER_TRANSITION_TO)\b" src CMakeLists.txt ship_files > /tmp/5ed-check-1.txt; then
-    fail_check "no-removed-macros"
-    cat /tmp/5ed-check-1.txt
-else
-    pass "no-removed-macros"
-fi
+require_no_grep no-removed-macros -rnE "\b(OS_WINDOWS|OS_MAC|OS_LINUX|OS_NAME|ARCH_X86|ARCH_X64|ARCH_ARM(32|64)|ARCH_(32|64)BIT|ARCH_NAME|COMPILER_(CL|GCC|CLANG|NAME)|CALL_CONVENTION|JUST_GUESS_INTS|FTECH_64_BIT|FCODER_TRANSITION_TO)\b" src CMakeLists.txt ship_files
 
 # 2. no-bat-or-other-os
-if grep -rniE "default_(compiler|flags)_bat|setup_build_bat|prj_generate_bat|\.bat\b|(^|[^A-Za-z0-9_])\.(win|mac) *=" src ship_files CMakeLists.txt > /tmp/5ed-check-2.txt; then
-    fail_check "no-bat-or-other-os"
-    cat /tmp/5ed-check-2.txt
-else
-    pass "no-bat-or-other-os"
-fi
+require_no_grep no-bat-or-other-os -rniE "default_(compiler|flags)_bat|setup_build_bat|prj_generate_bat|\.bat\b|(^|[^A-Za-z0-9_])\.(win|mac) *=" src ship_files CMakeLists.txt
 
 # 3. no-ctm
 ctm_hit=0

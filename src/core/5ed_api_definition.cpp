@@ -207,6 +207,25 @@ api_get_callable_name(Arena *arena, String_Const_u8 api_name, String_Const_u8 na
 ////////////////////////////////
 
 function void
+api_write_param_list(FILE *out, API_Call *call){
+    if (call->params.count == 0){
+        fprintf(out, "void");
+    }
+    else{
+        for (API_Param *param = call->params.first;
+             param != 0;
+             param = param->next){
+            fprintf(out, "%.*s %.*s",
+                    string_expand(param->type_name),
+                    string_expand(param->name));
+            if (param->next != 0){
+                fprintf(out, ", ");
+            }
+        }
+    }
+}
+
+function void
 generate_api_master_list(Arena *scratch, API_Definition *api, API_Generation_Flag flags, FILE *out){
     for (API_Call *call = api->first_call;
          call != 0;
@@ -215,21 +234,7 @@ generate_api_master_list(Arena *scratch, API_Definition *api, API_Generation_Fla
                 string_expand(api->name),
                 string_expand(call->return_type),
                 string_expand(call->name));
-        if (call->params.count == 0){
-            fprintf(out, "void");
-        }
-        else{
-            for (API_Param *param = call->params.first;
-                 param != 0;
-                 param = param->next){
-                fprintf(out, "%.*s %.*s",
-                        string_expand(param->type_name),
-                        string_expand(param->name));
-                if (param->next != 0){
-                    fprintf(out, ", ");
-                }
-            }
-        }
+        api_write_param_list(out, call);
         fprintf(out, ");\n");
     }
 }
@@ -245,21 +250,7 @@ generate_header(Arena *scratch, API_Definition *api, API_Generation_Flag flags, 
                 string_expand(call->return_type),
                 string_expand(api->name),
                 string_expand(call->name));
-        if (call->params.count == 0){
-            fprintf(out, "void");
-        }
-        else{
-            for (API_Param *param = call->params.first;
-                 param != 0;
-                 param = param->next){
-                fprintf(out, "%.*s %.*s",
-                        string_expand(param->type_name),
-                        string_expand(param->name));
-                if (param->next != 0){
-                    fprintf(out, ", ");
-                }
-            }
-        }
+        api_write_param_list(out, call);
         fprintf(out, ")\n");
     }
     
@@ -270,21 +261,7 @@ generate_header(Arena *scratch, API_Definition *api, API_Generation_Flag flags, 
                 string_expand(call->return_type),
                 string_expand(api->name),
                 string_expand(call->name));
-        if (call->params.count == 0){
-            fprintf(out, "void");
-        }
-        else{
-            for (API_Param *param = call->params.first;
-                 param != 0;
-                 param = param->next){
-                fprintf(out, "%.*s %.*s",
-                        string_expand(param->type_name),
-                        string_expand(param->name));
-                if (param->next != 0){
-                    fprintf(out, ", ");
-                }
-            }
-        }
+        api_write_param_list(out, call);
         fprintf(out, ");\n");
     }
     
@@ -309,21 +286,7 @@ generate_header(Arena *scratch, API_Definition *api, API_Generation_Flag flags, 
         fprintf(out, "internal %.*s %.*s(",
                 string_expand(call->return_type),
                 string_expand(callable_name));
-        if (call->params.count == 0){
-            fprintf(out, "void");
-        }
-        else{
-            for (API_Param *param = call->params.first;
-                 param != 0;
-                 param = param->next){
-                fprintf(out, "%.*s %.*s",
-                        string_expand(param->type_name),
-                        string_expand(param->name));
-                if (param->next != 0){
-                    fprintf(out, ", ");
-                }
-            }
-        }
+        api_write_param_list(out, call);
         fprintf(out, ");\n");
     }
     fprintf(out, "#undef STATIC_LINK_API\n");
