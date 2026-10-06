@@ -12,11 +12,17 @@ Requires GCC (g++), CMake 3.20+, and the X11, Xfixes, OpenGL (GLX) and FreeType 
     cmake --build build -j
     ./build/5ed
 
+Release does not use link-time optimization. IPO warns about OpenGL function pointer types. The build stays without those warnings.
+
 The build writes `5ed`, `5ed_app.so` and `custom_5ed.so` to `build/`, together with the contents of `ship_files/` (fonts, themes, default config and bindings). The command table the custom layer needs is generated during the build into `build/gen/`.
+
+Source layout: `src/base`, `src/core`, `src/custom`, `src/platform`. The compile line uses one include root, `-I src`.
 
 Config, bindings, themes and projects are `*.5ed` files, looked up in the loaded project's directory, then `~/.5ed/`, then the directory containing the binary.
 
-Developer targets (not built by default) regenerate the checked-in files under `custom/generated/` and `generated/`: `regen` (keycodes and the system, font, graphics and custom APIs), `regen-lexer` (C++ lexer tables; its output currently differs from the checked-in `lexer_cpp.cpp`, so only run it when the lexer definition changes), and `check-api-docs` (reports undocumented Custom API functions).
+Developer targets (not built by default) regenerate the checked-in files under `src/base/generated/`: `regen` (keycodes and the system, font, graphics and custom APIs), `regen-lexer` (C++ lexer tables; its output currently differs from the checked-in `lexer_cpp.cpp`, so only run it when the lexer definition changes), `check-api-docs` (reports undocumented Custom API functions), `check-structure` (checks the source layout and the once-built base library; it builds all tools first), and `check-security` (checks that the project setup commands do not write through symlinks or change files that exist).
+
+Other check targets: `check-tools` builds every generator tool without running it. `check-project-file` writes a new project with the `setup_new_project` generators and parses it, this repo's `project.5ed` and `ship_files/config.5ed` with the real config parser. `scripts/test-check-structure.sh <source-root> <build-dir>...` tests the `check-structure` script itself.
 
 # Inherited problems being worked on
 
@@ -24,7 +30,6 @@ Developer targets (not built by default) regenerate the checked-in files under `
 2. The documentation system is over-complicated and the documentation is incomplete.
 3. The lexer generator is too complicated, and adding a language is hard.
 4. Several layers of configuration parsers.
-5. Weak base layer, duplicated between the custom layer and the core.
 
 # License
 

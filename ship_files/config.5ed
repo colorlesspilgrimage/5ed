@@ -24,18 +24,16 @@ enable_output_wrapping = false;
 
 enable_undo_fade_out = true;
 
-// cursor_roundess is a value [0,50] setting the radius of
-// the cursor and mark's roundness as a percentage of their width
-// (At 50 the left and right corners will be so round they form a semi-circle,
-//  hence 50 is the max)
+// cursor_roundness is 0 to 50.
+// It is the corner radius as a percent of width.
+// 50 makes each side a half circle.
 cursor_roundness = 45;
 
-// mark_thickness is a pixel count value setting the
-// thickness of the mark wire box in original mode
+// mark_thickness is the mark box width in pixels.
 mark_thickness = 2;
 
-// lister_roundess is a value [0,50] setting the radius of
-// the lister items' roundness as a percentage of their height
+// lister_roundness is 0 to 50.
+// It is the corner radius as a percent of height.
 lister_roundness = 20;
 
 // Code Wrapping
@@ -44,8 +42,9 @@ enable_virtual_whitespace = true;
 virtual_whitespace_regular_indent = 4;
 enable_code_wrapping = true;
 
-// This only applies to code files in code-wrapping mode.
-// Plain text and code files without virtual-whitespace will not be effected.
+// This setting applies only to code files in code-wrapping mode.
+// Plain text files do not use it.
+// Code files without virtual whitespace do not use it.
 automatically_indent_text_on_save = true;
 
 // When set to true, all unsaved changes will be saved on a build.
@@ -79,8 +78,6 @@ user_name = "not-set";
 lalt_lctrl_is_altgr = false;
 
 // Project setup configuration
-default_compiler_bat = "cl";
-default_flags_bat = "-FC -GR- -EHa- -nologo -Zi";
 default_compiler_sh = "g++";
 default_flags_sh  = "-g";
 
