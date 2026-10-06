@@ -1,25 +1,18 @@
 # Roadmap
 
-Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port. See `git log`.
+Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port, Linux-only cleanup (item 1), base layer and source layout (item 2). See `git log`.
 
 Items are roughly in the order intended. Each should leave the tree building and the editor launching.
 
-## 1. Finish the Linux-only cleanup
+## 1. Finish the Linux-only cleanup (done)
 
-- Remove the remaining OS and compiler detection for Windows, Mac and Clang in `custom/5ed_base_types.h`, and the branches that depend on it (`OS_WINDOWS`, `OS_MAC`, `ARCH_X86`, `COMPILER_CL`).
-- Remove the `OS_LINUX` conditionals once nothing else is a target.
-- Drop dead config: `default_compiler_bat`, `default_flags_bat`, `.bat` build-script generation in `setup_build_bat*`, the `.win` / `.mac` keys accepted by the project parser, and `ship_files` text that mentions them.
-- Remove `4ed_data.ctm` handling if unused, and other leftovers from the demo/super tiers (`FRED_INTERNAL` is the only flag still used).
+## 2. Unify the base layer (done)
 
-## 2. Unify the base layer
-
-- `5ed_base_types.cpp` (7.3k lines) is compiled separately into the platform layer, the core and the custom layer. Define it once.
-- Resolve the double definitions between core and custom (upstream's note 5) and the collision-avoidance names introduced by the rebrand (`5ed_stdio_file`, `5ed_layout_lookup`, `5ed_log_helpers`).
-- Move to a layout without the flat `-I . -I custom` include namespace: `src/base`, `src/core`, `src/custom`, `src/platform`.
 
 ## 3. Remove the `.so` split
 
 - `5ed_app.so` and `custom_5ed.so` are each `dlopen`ed once at startup and never unloaded or reloaded (`platform_linux/linux_5ed.cpp`), so there is no hot reload to preserve.
+- The files listed in `CMakeLists.txt` as per-target stay compiled once per binary. Merge them here.
 - Link core and custom layer into the main executable. Keep the `custom_api` / `system_api` vtable boundary at first and remove it afterwards if nothing needs it.
 - Remove the custom-DLL command line option (`CLAct_CustomDLL` in `5ed.cpp`) and the version handshake (`get_version`, `init_apis`).
 - Decide on the user customisation story: edit `custom/` and rebuild, or keep a plugin path.

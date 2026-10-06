@@ -79,8 +79,6 @@ user_name = "not-set";
 lalt_lctrl_is_altgr = false;
 
 // Project setup configuration
-default_compiler_bat = "cl";
-default_flags_bat = "-FC -GR- -EHa- -nologo -Zi";
 default_compiler_sh = "g++";
 default_flags_sh  = "-g";
 

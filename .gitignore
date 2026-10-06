@@ -1,7 +1,6 @@
 build/
-5ed_data.ctm
 .DS_Store
 *.dSYM
 # Unused by-products of the core API generators (font, graphics).
-generated/*_master_list.h
-generated/*_constructor.cpp
+src/base/generated/font_api_*
+src/base/generated/graphics_api_*
