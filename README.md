@@ -47,17 +47,12 @@ SOFTWARE.
 
 # Build Instructions
 
-1. Create an empty folder named "4ed" to contain the codebase.
-2. Clone the repository
-3. Rename the folder containing the repository to "code"
-4. At the same level as the "4ed" folder, clone the "4coder-non-source" repository
-5. A. On windows setup the visual studio command line magic sauce so that "cl" works
-   B. On linux setup g++
-   C. On mac setup clang
-6. Navigate to the "4ed/code" folder.
-7. A. On windows run "bin\build.bat"
-   B. On linux run "bin\build-linux.sh"
-   C. On linux run "bin\build-mac.sh"
+Linux (x86-64) only. Requires g++, X11, Xfixes, OpenGL (GLX), and FreeType development packages (found via pkg-config).
+
+    ./build.sh          # dev build (default), or: ./build.sh opt
+    ./build/4ed
+
+The build writes `4ed`, `4ed_app.so` and `custom_4coder.so` to `build/`, together with the contents of `ship_files/` (fonts, themes, default config and bindings).
 
 
 # Notes on Major Issues

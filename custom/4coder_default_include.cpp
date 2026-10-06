@@ -97,7 +97,6 @@
 #include "generated/lexer_cpp.cpp"
 
 #include "4coder_default_map.cpp"
-#include "4coder_mac_map.cpp"
 
 #include "4coder_default_framework_variables.cpp"
 #include "4coder_default_colors.cpp"

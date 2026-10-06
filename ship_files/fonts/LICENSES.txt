@@ -1,0 +1,8 @@
+Inconsolata-Regular.ttf
+  Copyright (c) 2006-2012, Raph Levien, Copyright (c) 2011-2012, Cyreal.
+  SIL Open Font License 1.1: http://scripts.sil.org/OFL
+
+liberation-mono.ttf
+  Copyright (c) 2007 Red Hat, Inc. Liberation 1.x.
+  Liberation Fonts license (GPLv2 with font exception):
+  https://fedoraproject.org/wiki/Licensing/LiberationFontLicense

@@ -18,17 +18,6 @@ push_build_directory_at_file(Application_Links *app, Arena *arena, Buffer_ID buf
     return(result);
 }
 
-#if OS_WINDOWS
-
-global String_Const_u8 standard_build_file_name_array[] = {
-    str8_lit("build.bat"),
-};
-global String_Const_u8 standard_build_cmd_string_array[] = {
-    str8_lit("build"),
-};
-
-#elif OS_LINUX || OS_MAC
-
 global String_Const_u8 standard_build_file_name_array[] = {
     str8_lit("build.sh"),
     str8_lit("Makefile"),
@@ -37,10 +26,6 @@ global String_Const_u8 standard_build_cmd_string_array[] = {
     str8_lit("build.sh"),
     str8_lit("make"),
 };
-
-#else
-#error OS needs standard search and build rules
-#endif
 
 static String_Const_u8
 push_fallback_command(Arena *arena, String_Const_u8 file_name){

@@ -6,9 +6,7 @@
 
 #include <stdlib.h>
 
-#if !OS_MAC
-# include <malloc.h>
-#endif
+#include <malloc.h>
 
 internal void*
 base_reserve__malloc(void *user_data, u64 size, u64 *size_out, String_Const_u8 location){

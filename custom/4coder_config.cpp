@@ -86,19 +86,10 @@ setup_built_in_mapping(Application_Links *app, String_Const_u8 name, Mapping *ma
         mapping_init(tctx, mapping);
         setup_default_mapping(mapping, global_id, file_id, code_id);
     }
-    else if (string_match(name, string_u8_litexpr("mac-default"))){
-        mapping_release(tctx, mapping);
-        mapping_init(tctx, mapping);
-        setup_mac_mapping(mapping, global_id, file_id, code_id);
-    }
     else if (string_match(name, string_u8_litexpr("choose"))){
         mapping_release(tctx, mapping);
         mapping_init(tctx, mapping);
-#if OS_MAC
-        setup_mac_mapping(mapping, global_id, file_id, code_id);
-#else
         setup_default_mapping(mapping, global_id, file_id, code_id);
-#endif
     }
 }
 

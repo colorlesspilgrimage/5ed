@@ -1369,13 +1369,7 @@ delete_file_base(Application_Links *app, String_Const_u8 file_name, Buffer_ID bu
     String_Const_u8 path = string_remove_last_folder(file_name);
     Scratch_Block scratch(app);
     List_String_Const_u8 list = {};
-#if OS_WINDOWS
-    string_list_push_u8_lit(scratch, &list, "del ");
-#elif OS_LINUX || OS_MAC
     string_list_push_u8_lit(scratch, &list, "rm ");
-#else
-# error no delete file command for this platform
-#endif
     string_list_pushf(scratch, &list, "\"%.*s\"", string_expand(file_name));
     String_Const_u8 cmd = string_list_flatten(scratch, list, StringFill_NullTerminate);
     exec_system_command(app, 0, buffer_identifier(0), path, cmd, 0);

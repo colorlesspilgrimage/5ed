@@ -627,13 +627,6 @@ default_4coder_initialize(Application_Links *app, String_Const_u8_Array file_nam
     String_Const_u8 bindings_file_name = string_u8_litexpr("bindings.4coder");
     String_Const_u8 mapping = def_get_config_string(scratch, vars_save_string_lit("mapping"));
     
-    if (string_match(mapping, string_u8_litexpr("mac-default"))){
-        bindings_file_name = string_u8_litexpr("mac-bindings.4coder");
-    }
-    else if (OS_MAC && string_match(mapping, string_u8_litexpr("choose"))){
-        bindings_file_name = string_u8_litexpr("mac-bindings.4coder");
-    }
-    
     // TODO(allen): cleanup
     String_ID global_map_id = vars_save_string_lit("keys_global");
     String_ID file_map_id = vars_save_string_lit("keys_file");
