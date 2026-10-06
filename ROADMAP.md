@@ -57,3 +57,9 @@ Items are roughly in the order intended. Each should leave the tree building and
 - Replace the tutorial content (`5ed_tutorial.cpp`, still the Handmade Seattle demo) or remove it.
 - Rename `FCODER_*` include guards.
 - Add a copyright line for 5ed contributors to `LICENSE` if wanted.
+
+## 9. Open an OMP session from a hotkey
+
+- Support binding a hotkey that opens an OMP session in a pane.
+- The hotkey is user-bindable with the other key bindings (`.5ed` bindings, `ship_files/bindings.5ed`).
+- Pressing the bound hotkey opens the OMP session in a pane.
