@@ -189,3 +189,9 @@ add_custom_target(check-structure
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-structure.sh ${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}
     DEPENDS 5ed
     VERBATIM)
+
+# Security regression checks. See scripts/check-security.sh.
+add_custom_target(check-security
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-security.sh ${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}
+    DEPENDS 5ed_base
+    VERBATIM)

@@ -11,6 +11,11 @@ BUILD=$2
 cd "$ROOT"
 fail=0
 
+# Keep the output of each check in a private directory. Fixed names in /tmp
+# let another local user put a symlink there first.
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
 pass() {
     echo "PASS: $1"
 }
@@ -21,34 +26,34 @@ fail_check() {
 }
 
 # 1. no-removed-macros
-if grep -rnE "\b(OS_WINDOWS|OS_MAC|OS_LINUX|OS_NAME|ARCH_X86|ARCH_X64|ARCH_ARM(32|64)|ARCH_(32|64)BIT|ARCH_NAME|COMPILER_(CL|GCC|CLANG|NAME)|CALL_CONVENTION|JUST_GUESS_INTS|FTECH_64_BIT|FCODER_TRANSITION_TO)\b" src CMakeLists.txt ship_files > /tmp/5ed-check-1.txt; then
+if grep -rnE "\b(OS_WINDOWS|OS_MAC|OS_LINUX|OS_NAME|ARCH_X86|ARCH_X64|ARCH_ARM(32|64)|ARCH_(32|64)BIT|ARCH_NAME|COMPILER_(CL|GCC|CLANG|NAME)|CALL_CONVENTION|JUST_GUESS_INTS|FTECH_64_BIT|FCODER_TRANSITION_TO)\b" src CMakeLists.txt ship_files > "$tmp/check-1.txt"; then
     fail_check "no-removed-macros"
-    cat /tmp/5ed-check-1.txt
+    cat "$tmp/check-1.txt"
 else
     pass "no-removed-macros"
 fi
 
 # 2. no-bat-or-other-os
-if grep -rniE "default_(compiler|flags)_bat|setup_build_bat|prj_generate_bat|\.bat\b|(^|[^A-Za-z0-9_])\.(win|mac) *=" src ship_files CMakeLists.txt > /tmp/5ed-check-2.txt; then
+if grep -rniE "default_(compiler|flags)_bat|setup_build_bat|prj_generate_bat|\.bat\b|(^|[^A-Za-z0-9_])\.(win|mac) *=" src ship_files CMakeLists.txt > "$tmp/check-2.txt"; then
     fail_check "no-bat-or-other-os"
-    cat /tmp/5ed-check-2.txt
+    cat "$tmp/check-2.txt"
 else
     pass "no-bat-or-other-os"
 fi
 
 # 3. no-ctm
 ctm_hit=0
-if grep -n "ctm" .gitignore CMakeLists.txt > /tmp/5ed-check-3a.txt; then
+if grep -n "ctm" .gitignore CMakeLists.txt > "$tmp/check-3a.txt"; then
     ctm_hit=1
 fi
-if grep -rn "\.ctm" src ship_files > /tmp/5ed-check-3b.txt; then
+if grep -rn "\.ctm" src ship_files > "$tmp/check-3b.txt"; then
     ctm_hit=1
 fi
 if [ "$ctm_hit" -eq 0 ]; then
     pass "no-ctm"
 else
     fail_check "no-ctm"
-    cat /tmp/5ed-check-3a.txt /tmp/5ed-check-3b.txt 2>/dev/null || true
+    cat "$tmp/check-3a.txt" "$tmp/check-3b.txt" 2>/dev/null || true
 fi
 
 # 4. layout
@@ -157,9 +162,9 @@ once=(
 )
 cpp_bad=0
 for name in "${once[@]}"; do
-    if grep -rn "#include \"base/${name}\"" src > /tmp/5ed-check-7.txt; then
+    if grep -rn "#include \"base/${name}\"" src > "$tmp/check-7.txt"; then
         echo "FAIL: base-cpp-not-included $name"
-        cat /tmp/5ed-check-7.txt
+        cat "$tmp/check-7.txt"
         cpp_bad=1
     fi
 done
@@ -173,7 +178,7 @@ fi
 if [ ! -f "$BUILD/lib5ed_base.a" ]; then
     fail_check "define-once missing $BUILD/lib5ed_base.a"
 else
-    nm -C --defined-only "$BUILD/lib5ed_base.a" > /tmp/5ed-base-nm.txt
+    nm -C --defined-only "$BUILD/lib5ed_base.a" > "$tmp/base-nm.txt"
     sym_ok=1
     for sym in \
         "i32_ceil32(float)" \
@@ -182,20 +187,20 @@ else
         "layout_nearest_pos_to_xy(Layout_Item_List, Vec2_f32)" \
         "log_event(Arena*, String_Const_u8, String_Const_u8, int, int, int, int)"
     do
-        count=$(grep -F -c "$sym" /tmp/5ed-base-nm.txt || true)
+        count=$(grep -F -c "$sym" "$tmp/base-nm.txt" || true)
         if [ "$count" -ne 1 ]; then
             echo "FAIL: define-once archive count $count for $sym"
             sym_ok=0
         fi
     done
-    awk '/^[0-9a-fA-F]+ [TWVDBR] / { $1=""; $2=""; sub(/^ +/, ""); print }' /tmp/5ed-base-nm.txt | grep -v '^DW\.' | sort -u > /tmp/5ed-base-syms.txt
-    : > /tmp/5ed-other-syms.txt
+    awk '/^[0-9a-fA-F]+ [TWVDBR] / { $1=""; $2=""; sub(/^ +/, ""); print }' "$tmp/base-nm.txt" | grep -v '^DW\.' | sort -u > "$tmp/base-syms.txt"
+    : > "$tmp/other-syms.txt"
     while IFS= read -r obj; do
         nm -C --defined-only "$obj" | awk '/^[0-9a-fA-F]+ [TtwWvVdDbBrR] / { $1=""; $2=""; sub(/^ +/, ""); print }'
-    done < <(find "$BUILD/CMakeFiles" -name '*.o' -not -path '*5ed_base*') | sort -u > /tmp/5ed-other-syms.txt
-    if comm -12 /tmp/5ed-base-syms.txt /tmp/5ed-other-syms.txt | grep -q .; then
+    done < <(find "$BUILD/CMakeFiles" -name '*.o' -not -path '*5ed_base*') | sort -u > "$tmp/other-syms.txt"
+    if comm -12 "$tmp/base-syms.txt" "$tmp/other-syms.txt" | grep -q .; then
         echo "FAIL: define-once other objects define base symbols"
-        comm -12 /tmp/5ed-base-syms.txt /tmp/5ed-other-syms.txt | head -20
+        comm -12 "$tmp/base-syms.txt" "$tmp/other-syms.txt" | head -20
         sym_ok=0
     fi
     for bin in "$BUILD/5ed" "$BUILD/5ed_app.so" "$BUILD/custom_5ed.so"; do
