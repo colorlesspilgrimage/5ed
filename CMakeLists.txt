@@ -210,3 +210,9 @@ add_custom_target(check-project-file
             ${PROJECT_SOURCE_DIR}/project.5ed ${PROJECT_SOURCE_DIR}/ship_files/config.5ed
     DEPENDS test_project_file
     VERBATIM)
+
+# Security regression checks. See scripts/check-security.sh.
+add_custom_target(check-security
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-security.sh ${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}
+    DEPENDS 5ed_base
+    VERBATIM)

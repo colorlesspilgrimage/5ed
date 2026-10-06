@@ -368,6 +368,25 @@ prj_file_is_setup(Application_Links *app, String8 script_path, String8 script_fi
     return(result);
 }
 
+#include <fcntl.h>
+#include <unistd.h>
+
+// Create a new file for writing. Do not open a file that exists.
+// Do not follow a symlink, also if its target does not exist.
+// The hot directory can be an untrusted checkout. A symlink there must
+// not make 5ed write a file in a different location.
+function FILE*
+prj_create_new_file(char *file_name){
+    FILE *result = 0;
+    int fd = open(file_name, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0666);
+    if (fd >= 0){
+        result = fdopen(fd, "wb");
+        if (result == 0){
+            close(fd);
+        }
+    }
+    return(result);
+}
 
 function b32
 prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_path, String8 script_file, String8 code_file, String8 output_dir, String8 binary_file){
@@ -383,7 +402,7 @@ prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_p
                                         string_expand(script_path),
                                         string_expand(script_file));
     
-    FILE *sh_script = fopen((char*)file_name.str, "wb");
+    FILE *sh_script = prj_create_new_file((char*)file_name.str);
     if (sh_script != 0){
         fprintf(sh_script, "#!/bin/bash\n\n");
         fprintf(sh_script, "code=\"$PWD\"\n");
@@ -411,7 +430,7 @@ prj_generate_project(Arena *scratch, String8 script_path, String8 script_file, S
 
     String8 file_name = push_u8_stringf(scratch, "%.*s/project.5ed", string_expand(script_path));
     
-    FILE *out = fopen((char*)file_name.str, "wb");
+    FILE *out = prj_create_new_file((char*)file_name.str);
     if (out != 0){
         fprintf(out, "version(2);\n");
         fprintf(out, "project_name = \"%.*s\";\n", string_expand(binary_file));

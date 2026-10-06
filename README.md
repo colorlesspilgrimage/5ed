@@ -20,7 +20,7 @@ Source layout: `src/base`, `src/core`, `src/custom`, `src/platform`. The compile
 
 Config, bindings, themes and projects are `*.5ed` files, looked up in the loaded project's directory, then `~/.5ed/`, then the directory containing the binary.
 
-Developer targets (not built by default) regenerate the checked-in files under `src/base/generated/`: `regen` (keycodes and the system, font, graphics and custom APIs), `regen-lexer` (C++ lexer tables; its output currently differs from the checked-in `lexer_cpp.cpp`, so only run it when the lexer definition changes), `check-api-docs` (reports undocumented Custom API functions), and `check-structure` (checks the source layout and the once-built base library; it builds all tools first).
+Developer targets (not built by default) regenerate the checked-in files under `src/base/generated/`: `regen` (keycodes and the system, font, graphics and custom APIs), `regen-lexer` (C++ lexer tables; its output currently differs from the checked-in `lexer_cpp.cpp`, so only run it when the lexer definition changes), `check-api-docs` (reports undocumented Custom API functions), `check-structure` (checks the source layout and the once-built base library; it builds all tools first), and `check-security` (checks that the project setup commands do not write through symlinks or change files that exist).
 
 Other check targets: `check-tools` builds every generator tool without running it. `check-project-file` writes a new project with the `setup_new_project` generators and parses it, this repo's `project.5ed` and `ship_files/config.5ed` with the real config parser. `scripts/test-check-structure.sh <source-root> <build-dir>...` tests the `check-structure` script itself.
 
