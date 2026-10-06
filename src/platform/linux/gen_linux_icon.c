@@ -1,14 +1,11 @@
-// NOTE(inso): how to use:
-//
-// load up the icon in gimp and choose export, select "c source code (*.c)" as the format
-// call the file gimp_icon.c, then include it by uncommenting line below.
-//
-// make sure the struct in the .c file is called gimp_image (the default).
-//
-// then just compile and run this program and it'll create linux_icon.h
+// Export the icon from GIMP as C source.
+// Name the file gimp_icon.c.
+// The struct name must be gimp_image.
+// Add an include of gimp_icon.c below the stdio include.
+// Compile this program and run it.
+// The program writes linux_icon.h.
 
 #include <stdio.h>
-// Include gimp_icon.c here when you generate an icon.
 
 #define OUTPUT_FILE "linux_icon.h"
 

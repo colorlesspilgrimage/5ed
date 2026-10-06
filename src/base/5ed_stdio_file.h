@@ -1,7 +1,3 @@
-/*
- 5ed_stdio_file.h - File enumeration and reading procedures for each platform.
- */
-
 // TOP
 
 #if !defined(FCODER_FILE_ENUMERATOR_CPP)

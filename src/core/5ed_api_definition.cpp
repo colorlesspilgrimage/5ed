@@ -418,7 +418,6 @@ generate_constructor(Arena *scratch, API_Definition *api, API_Generation_Flag fl
 
 function b32
 api_definition_generate_api_includes(Arena *arena, API_Definition *api, Generated_Group group, API_Generation_Flag flags){
-    // NOTE(allen): Arrange output files
     
     String_Const_u8 path_to_self = string_u8_litexpr(__FILE__);
     path_to_self = string_remove_last_folder(path_to_self);
@@ -492,7 +491,6 @@ api_definition_generate_api_includes(Arena *arena, API_Definition *api, Generate
     
     ////////////////////////////////
     
-    // NOTE(allen): Generate output
     
     generate_api_master_list(arena, api, flags, out_file_ml);
     generate_header(arena, api, flags, out_file_h);

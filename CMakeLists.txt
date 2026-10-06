@@ -82,11 +82,12 @@ set_target_properties(5ed_base PROPERTIES CXX_VISIBILITY_PRESET hidden)
 ################################################################################
 # Custom layer: custom_5ed.so
 #
-# The command table (command_metadata.h) and managed ids are generated from the
-# custom layer's own source: preprocess it with -DMETA_PASS, feed the result to
-# metadata_generator, then compile the layer again with the generated files.
-# Output goes to the build tree; paths recorded in the table are relative to
-# the source root.
+# Build the command table from the custom layer.
+# Preprocess that layer with -DMETA_PASS.
+# metadata_generator reads that output and writes the table.
+# Compile the layer again with the generated files.
+# Keep the output in the build tree.
+# Paths in the table are relative to the source root.
 
 add_executable(metadata_generator src/custom/5ed_metadata_generator.cpp)
 target_link_libraries(metadata_generator PRIVATE 5ed_common 5ed_base)
@@ -143,13 +144,13 @@ add_custom_target(5ed_runtime_files ALL
 add_dependencies(5ed 5ed_runtime_files custom_5ed 5ed_app)
 
 ################################################################################
-# Developer tools. Not part of the default build. The `regen-*` targets run a
-# generator that rewrites checked-in files under src/base/generated/
-# in the source tree; `regen` runs all except regen-lexer, whose output differs
-# from the checked-in lexer_cpp.cpp (not investigated): run it only when the
-# lexer definition changes. Do not build `regen-lexer` in parallel with a target
-# that compiles the lexer. Regenerated keycodes differ from the checked-in file
-# only in indentation.
+# Developer tools are not part of the default build.
+# regen-* rewrites checked-in files in src/base/generated/.
+# regen does not run regen-lexer.
+# That output differs from the checked-in lexer_cpp.cpp.
+# Run regen-lexer only when the lexer definition changes.
+# Do not build regen-lexer with a target that compiles the lexer.
+# Regenerated keycodes differ only in indentation.
 
 function(fiveed_tool name)
     add_executable(${name} EXCLUDE_FROM_ALL ${ARGN})
