@@ -126,6 +126,11 @@ map_set_binding_l(m, map, BindFWrap_(F), InputEventKind_MouseMove, 0, ##__VA_ARG
 #define BindCore(F, K, ...) \
 map_set_binding_l(m, map, BindFWrap_(F), InputEventKind_Core, (K), ##__VA_ARGS__, 0)
 
+// Each binary compiles its own copy of base/per_target/5ed_command_map.cpp.
+// Hidden visibility keeps each copy private to its binary, as the old static
+// functions did. The .so files do not export these names.
+#pragma GCC visibility push(hidden)
+
 u64
 mapping__key(Input_Event_Kind kind, u32 sub_code);
 Command_Map*
@@ -246,6 +251,8 @@ map_set_binding_l(Mapping *mapping, Command_Map *map, char *name, u32 code1, u32
 void
 map_set_binding_l(Mapping *mapping, Command_Map *map, Custom_Command_Function *custom, u32 code1, u32 code2, ...);
 #endif
+
+#pragma GCC visibility pop
 #endif
 
 // BOTTOM

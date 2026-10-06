@@ -443,8 +443,8 @@ prj_generate_project(Arena *scratch, String8 script_path, String8 script_file, S
         fprintf(out, "};\n");
         
         fprintf(out, "fkey_command = {\n");
-        fprintf(out, ".F1 = \"run\";\n");
-        fprintf(out, ".F2 = \"run\";\n");
+        fprintf(out, ".F1 = \"run\",\n");
+        fprintf(out, ".F2 = \"run\",\n");
         fprintf(out, "};\n");
         
         fclose(out);
