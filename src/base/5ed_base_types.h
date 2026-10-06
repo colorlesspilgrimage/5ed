@@ -84,17 +84,12 @@ enum{
 
 #define Stmnt(s) do{ s }while(0)
 
-// NOTE(allen): Assert notes:
-// Break = the run time implementation of break
-//                - replace this to get fancier behavior on assert
-// Always = assert that is not compiled out in SHIP_MODE
-//                - helpful for debugging specific issues
-//                - used rarely in normal code
-// Message = unconditional asserts with an attached message
-//                - InvalidPath version for paths of a switch or if-else dispatch that should always be unreachable
-//                - NotImplemented version for stubs functions that are not yet completed
-// Static = asserts that contain only compile time constants and become compilation errors
-// Disambiguate = for static asserts that happen to have name conflicts
+// AssertBreak stops the program. Replace it to change assert behavior.
+// AssertAlways stays active in SHIP_MODE. Use it rarely.
+// AssertMessage always stops and keeps a message.
+// InvalidPath and NotImplemented use AssertMessage.
+// Static asserts use compile-time constants and fail the build.
+// Disambiguate avoids a name clash in static asserts.
 
 #define AssertBreak(m) (*((i32*)0) = 0xA11E)
 #define AssertAlways(c) Stmnt( if (!(c)) { AssertBreak(c); } )

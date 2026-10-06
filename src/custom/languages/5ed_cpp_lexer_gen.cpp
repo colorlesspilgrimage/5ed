@@ -1,6 +1,6 @@
 /*
-5ed_lex_gen_cpp.cpp - Model definition for a C++ lexer.
-*/
+ * C++ lexer model.
+ */
 
 // TOP
 

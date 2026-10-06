@@ -604,7 +604,6 @@ font_make_face(Arena* arena, Face_Description* description, f32 scale_factor) {
     Face* result = ft__font_make_face(arena, &local_description, scale_factor);
     
     if(!result) {
-        // is this fatal? 5ed.cpp:277 (caller) does not check for null.
         char msg[4096];
         snprintf(msg, sizeof(msg), "Unable to load font: %.*s", string_expand(*name));
         system_error_box(msg);
@@ -1744,7 +1743,6 @@ linux_epoll_process(struct epoll_event* events, int num_events) {
 
 int
 main(int argc, char **argv){
-    // NOTE(allen): fucking bullshit. someone get my shit togeth :(er
     
     for (i32 i = 0; i < argc; i += 1){
         String_Const_u8 arg = SCu8(argv[i]);
@@ -1753,7 +1751,6 @@ main(int argc, char **argv){
         }
     }
     
-    // NOTE(allen): All of This thing
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
@@ -1790,8 +1787,6 @@ main(int argc, char **argv){
     dll_init_sentinel(&linuxvars.free_linux_objects);
     dll_init_sentinel(&linuxvars.timer_objects);
     
-    //InitializeCriticalSection(&win32vars.thread_launch_mutex);
-    //InitializeConditionVariable(&win32vars.thread_launch_cv);
     
     linuxvars.clipboard_catch_all = false;
     

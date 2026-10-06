@@ -1,6 +1,6 @@
 /*
-5ed_default_bidings.cpp - Supplies the default bindings used for default 5ed behavior.
-*/
+ * Default bindings.
+ */
 
 // TOP
 

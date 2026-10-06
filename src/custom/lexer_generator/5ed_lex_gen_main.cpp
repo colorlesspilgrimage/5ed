@@ -3972,7 +3972,6 @@ int main(void){
     
     ////////////////////////////////
     
-    // NOTE(allen): Arrange input files and output files
     
     String_Const_u8 path_to_self = string_u8_litexpr(__FILE__);
     path_to_self = string_remove_last_folder(path_to_self);

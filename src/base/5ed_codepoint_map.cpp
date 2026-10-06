@@ -14,7 +14,6 @@ codepoint_index_map_read(Codepoint_Index_Map *map, u32 codepoint, u16 *index_out
         *index_out = map->zero_index;
     }
     else if (table_read(&map->table, codepoint, index_out)){
-        // NOTE(allen): do nothing
     }
     else{
         success = false;

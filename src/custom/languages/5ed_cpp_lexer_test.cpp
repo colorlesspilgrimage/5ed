@@ -1,6 +1,6 @@
 /*
-5ed_lexer_cpp_test.cpp - A tester for the C++ lexer.
-*/
+ * C++ lexer tester.
+ */
 
 // TOP
 

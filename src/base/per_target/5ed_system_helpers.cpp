@@ -1,7 +1,3 @@
-/*
- * 5ed_system_types.h - Implementation of universal (cross platform) helpers
- */
-
 // TOP
 
 Mutex_Lock::Mutex_Lock(System_Mutex m){
