@@ -792,9 +792,7 @@ struct Process_State{
 
 ////////////////////////////////
 
-// NOTE(allen): buffers are allocate with:
-// array_count = channel_count*sample_count
-// channel_count = 2
+// Mix buffers use 2 channels. array_count is channel_count times sample_count.
 typedef void Audio_Mix_Sources_Function(void *ctx, f32 *buffer, u32 sample_count);
 typedef void Audio_Mix_Destination_Function(i16 *dst, f32 *src, u32 sample_count);
 

@@ -21,8 +21,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# The build writes one executable. It finds fonts/, themes/ and config files
-# next to that executable.
+# Put the executable in the build directory.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Old builds made a core library and a custom library. The editor does not use
@@ -37,7 +36,6 @@ find_package(X11 REQUIRED COMPONENTS Xfixes)
 find_package(OpenGL REQUIRED)
 find_package(Freetype REQUIRED)
 
-# Settings shared by every target in the project.
 # One include root: paths are base/, core/, custom/ and platform/.
 add_library(5ed_common INTERFACE)
 target_include_directories(5ed_common INTERFACE ${PROJECT_SOURCE_DIR}/src)
@@ -74,14 +72,9 @@ target_link_libraries(5ed_base PUBLIC 5ed_common)
 set_target_properties(5ed_base PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 ################################################################################
-# Custom layer. It is an object library linked into 5ed.
-#
-# Build the command table from the custom layer.
-# Preprocess that layer with -DMETA_PASS.
-# metadata_generator reads that output and writes the table.
-# Compile the layer again with the generated files.
-# Keep the output in the build tree.
-# Paths in the table are relative to the source root.
+# Custom layer.
+# Table paths are relative to the source root.
+# Keep the generated table in the build tree.
 
 add_executable(metadata_generator src/custom/5ed_metadata_generator.cpp)
 target_link_libraries(metadata_generator PRIVATE 5ed_common 5ed_base)
@@ -113,7 +106,7 @@ target_include_directories(5ed_custom PRIVATE ${GENERATED_ROOT})
 target_link_libraries(5ed_custom PRIVATE 5ed_common 5ed_base)
 
 ################################################################################
-# Core. It is an object library linked into 5ed.
+# Core.
 
 add_library(5ed_core OBJECT src/core/5ed_app_target.cpp)
 target_link_libraries(5ed_core PRIVATE 5ed_common 5ed_base)

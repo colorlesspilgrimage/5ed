@@ -86,7 +86,6 @@
 #define function static
 #undef Cursor
 
-//#include <fontconfig/fontconfig.h>
 #define internal static
 
 #include <GL/glx.h>
@@ -97,7 +96,7 @@
 fprintf(stderr, "%s: " fmt "\n", __func__, ##__VA_ARGS__);\
 } while (0)
 
-// I want to see a message
+// Print the assert text, then stop.
 #undef AssertBreak
 #define AssertBreak(m) ({\
 fprintf(stderr, "\n** ASSERTION FAILURE: %s:%d: %s\n\n", __FILE__, __LINE__, #m);\
@@ -156,7 +155,6 @@ struct Linux_Vars {
     int xfixes_selection_event;
     XIM xim;
     XIC xic;
-    //FcConfig* fontconfig;
     XkbDescPtr xkb;
     
     Linux_Input_Chunk input;
@@ -218,7 +216,7 @@ global Render_Target render_target;
 
 ////////////////////////////
 
-// Defererencing an epoll_event's .data.ptr will always give one of these event types.
+// An epoll_event data.ptr is one of these event types.
 
 typedef i32 Epoll_Kind;
 enum {
@@ -229,10 +227,8 @@ enum {
     EPOLL_USER_TIMER,
 };
 
-// Where per-event epoll data is not needed, .data.ptr will point to one of
-// these static vars below.
-// If per-event data is needed, container_of can be used on data.ptr
-// to access the containing struct and all its other members.
+// Static tags are for events with no extra data.
+// Use container_of when the event needs more fields.
 
 internal Epoll_Kind epoll_tag_step_timer = EPOLL_STEP_TIMER;
 internal Epoll_Kind epoll_tag_x11 = EPOLL_X11;
@@ -710,14 +706,10 @@ glx_create_context(GLXFBConfig fb_config){
     XSync(linuxvars.dpy, False);
     XSetErrorHandler(old_handler);
     
-    //b32 direct = glXIsDirect(linuxvars.dpy, ctx);
     
-    //LOG("Making context current\n");
     glXMakeCurrent(linuxvars.dpy, linuxvars.win, ctx);
     
-    //glx_enable_vsync();
     
-    // NOTE(allen): Load gl functions
 #define GL_FUNC(f,R,P) GLXLOAD(f)
 #include "platform/opengl/5ed_opengl_funcs.h"
     
@@ -895,7 +887,7 @@ linux_x11_init(int argc, char** argv, Plat_Settings* settings) {
         linuxvars.xim = XOpenIM(dpy, 0, 0, 0);
     }
     
-    // If it still isn't there we're screwed.
+    // No input method is available.
     if (!linuxvars.xim){
         system_error_box("Could not initialize X Input.");
     }
@@ -1749,7 +1741,6 @@ main(int argc, char **argv){
     pthread_mutex_init(&linuxvars.audio_mutex, &attr);
     pthread_cond_init(&linuxvars.audio_cond, NULL);
     
-    // NOTE(allen): context setup
     {
         Base_Allocator* alloc = get_base_allocator_system();
         thread_ctx_init(&linuxvars.tctx, ThreadKind_Main, alloc, alloc);
@@ -1762,12 +1753,10 @@ main(int argc, char **argv){
     API_VTable_font font_vtable = {};
     font_api_fill_vtable(&font_vtable);
     
-    // NOTE(allen): memory
     linuxvars.frame_arena = make_arena_system();
     linuxvars.clipboard_arena = make_arena_system();
     render_target.arena = make_arena_system(KB(256));
     
-    //linuxvars.fontconfig = FcInitLoadConfigAndFonts();
     
     linuxvars.cursor_show = MouseCursorShow_Always;
     linuxvars.prev_cursor_show = MouseCursorShow_Always;
@@ -1780,13 +1769,10 @@ main(int argc, char **argv){
     
     App_Functions app = app_get_functions();
     
-    // NOTE(allen): send font and graphics vtables to core
     app.load_vtables(&font_vtable, &graphics_vtable);
-    // get_logger calls log_init which is needed.
-    //app.get_logger();
+    // get_logger runs log_init.
     linuxvars.log_string = app.get_logger();
     
-    // NOTE(allen): init & command line parameters
     Plat_Settings plat_settings = {};
     void *base_ptr = 0;
     {
@@ -1796,21 +1782,8 @@ main(int argc, char **argv){
         char **files = 0;
         i32 *file_count = 0;
         base_ptr = app.read_command_line(&linuxvars.tctx, curdir, &plat_settings, &files, &file_count, argc, argv);
-        /* TODO(inso): what is this doing?
-        {
-            i32 end = *file_count;
-            i32 i = 0, j = 0;
-            for (; i < end; ++i){
-                if (system_file_can_be_made(scratch, (u8*)files[i])){
-                    files[j] = files[i];
-                    ++j;
-                }
-            }
-            *file_count = j;
-        }*/
     }
     
-    // NOTE(allen): setup user directory override
     if (plat_settings.user_directory != 0){
         lnx_override_user_directory = plat_settings.user_directory;
     }
@@ -1823,7 +1796,6 @@ main(int argc, char **argv){
     linuxvars.audio_thread = system_thread_launch(&linux_audio_main, NULL);
     
     
-    // app init
     {
         Scratch_Block scratch(&linuxvars.tctx);
         String_Const_u8 curdir = system_get_path(scratch, SystemPath_CurrentDirectory);
@@ -1853,7 +1825,6 @@ main(int argc, char **argv){
         if (num_events == -1){
             if (errno != EINTR){
                 perror("epoll_wait");
-                //LOG("epoll_wait\n");
             }
             continue;
         }
@@ -1864,8 +1835,7 @@ main(int argc, char **argv){
         
         linuxvars.last_step_time = system_now_time();
         
-        // NOTE(allen): Frame Clipboard Input
-        // Request clipboard contents from X11 on first step, or every step if they don't have XFixes notification ability.
+        // Ask X11 for the clipboard on the first step, or each step without XFixes.
         if (first_step || (!linuxvars.has_xfixes && linuxvars.clipboard_catch_all)){
             XConvertSelection(linuxvars.dpy, linuxvars.atom_CLIPBOARD, linuxvars.atom_UTF8_STRING, linuxvars.atom_CLIPBOARD, linuxvars.win, CurrentTime);
         }
@@ -1892,23 +1862,19 @@ main(int argc, char **argv){
         input.mouse.release_r = linuxvars.input.trans.mouse_r_release;
         input.mouse.wheel = linuxvars.input.trans.mouse_wheel;
         
-        // NOTE(allen): Application Core Update
         Application_Step_Result result = {};
         if (app.step != 0){
             result = app.step(&linuxvars.tctx, &render_target, base_ptr, &input);
         }
         
-        // NOTE(allen): Finish the Loop
         if (result.perform_kill){
             break;
         }
         
-        // NOTE(NAME): Switch to New Title
         if (result.has_new_title){
             XStoreName(linuxvars.dpy, linuxvars.win, result.title_string);
         }
         
-        // NOTE(allen): Switch to New Cursor
         if (result.mouse_cursor_type != linuxvars.cursor && !linuxvars.input.pers.mouse_l){
             XCursor c = linuxvars.xcursors[result.mouse_cursor_type];
             if (linuxvars.cursor_show){
@@ -1922,7 +1888,6 @@ main(int argc, char **argv){
         
         // TODO(allen): don't let the screen size change until HERE after the render
         
-        // NOTE(allen): Schedule a step if necessary
         if (result.animating){
             linux_schedule_step();
         }
@@ -1936,5 +1901,5 @@ main(int argc, char **argv){
     return 0;
 }
 
-// NOTE(inso): to prevent me continuously messing up indentation
+// Keep this indent style.
 // vim: et:ts=4:sts=4:sw=4

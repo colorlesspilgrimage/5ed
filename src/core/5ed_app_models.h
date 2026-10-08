@@ -187,7 +187,6 @@ enum Command_Line_Action{
     CLAct_FontUseHinting,
     CLAct_UserDirectory,
     CLAct_SkipArgument,
-    //
     CLAct_COUNT,
 };
 

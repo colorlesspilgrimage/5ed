@@ -1,5 +1,5 @@
 /*
- * 5ed malloc base allocator
+ * System memory base allocator.
  */
 
 // TOP
