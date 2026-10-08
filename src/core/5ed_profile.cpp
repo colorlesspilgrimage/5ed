@@ -1,5 +1,5 @@
 /*
- * 5ed_profile.cpp - Built in self profiling report.
+ * Profile storage and block methods.
  */
 
 // TOP
@@ -31,7 +31,7 @@ prof__get_thread(Profile_Global_List *list, i32 thread_id){
     return(result);
 }
 
-function void
+void
 profile_clear(Profile_Global_List *list){
     Mutex_Lock lock(list->mutex);
     for (Arena_Node *node = list->first_arena;
@@ -81,16 +81,15 @@ profile_thread_flush(Thread_Context *tctx, Profile_Global_List *list){
     }
 }
 
-function void
+void
 profile_thread_set_name(Thread_Context *tctx, Profile_Global_List *list, String_Const_u8 name){
     Mutex_Lock lock(list->mutex);
     Profile_Thread* thread = prof__get_thread(list, system_thread_get_id());
     thread->name = name;
 }
 
-#define ProfileThreadName(tctx,list,name) profile_thread_set_name((tctx), (list), (name))
 
-function void
+void
 profile_set_enabled(Profile_Global_List *list, b32 value, Profile_Enable_Flag flag){
     Mutex_Lock lock(list->mutex);
     if (value){
@@ -142,22 +141,23 @@ thread_profile_record_pop(Application_Links *app, u64 time, Profile_ID id){
 
 ////////////////////////////////
 
+template <typename T>
 function void
 profile_block__init(Thread_Context *tctx, Profile_Global_List *list,
-                    String_Const_u8 name, String_Const_u8 location, Profile_Block *block){
+                    String_Const_u8 name, String_Const_u8 location, T *block){
     block->tctx = tctx;
     block->list = list;
     block->is_closed = false;
     block->id = thread_profile_record_push(tctx, system_now_time(), name, location);
 }
+
+template <typename T>
 function void
-profile_block__init(Thread_Context *tctx, Profile_Global_List *list,
-                    String_Const_u8 name, String_Const_u8 location,
-                    Profile_Scope_Block *block){
-    block->tctx = tctx;
-    block->list = list;
-    block->is_closed = false;
-    block->id = thread_profile_record_push(tctx, system_now_time(), name, location);
+profile_block__close(T *block){
+    if (!block->is_closed){
+        thread_profile_record_pop(block->tctx, system_now_time(), block->id);
+        block->is_closed = true;
+    }
 }
 
 ////////
@@ -168,19 +168,16 @@ Profile_Block::Profile_Block(Thread_Context *tctx, Profile_Global_List *list,
 }
 Profile_Block::Profile_Block(Application_Links *app, String_Const_u8 name,
                              String_Const_u8 location){
-    Thread_Context *v_tctx = get_thread_context(app);
-    Profile_Global_List *v_list = get_core_profile_list(app);
-    profile_block__init(v_tctx, v_list, name, location, this);
+    Thread_Context *tctx = get_thread_context(app);
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_block__init(tctx, list, name, location, this);
 }
 Profile_Block::~Profile_Block(){
     this->close_now();
 }
 void
 Profile_Block::close_now(){
-    if (!this->is_closed){
-        thread_profile_record_pop(this->tctx, system_now_time(), this->id);
-        this->is_closed = true;
-    }
+    profile_block__close(this);
 }
 
 ////////
@@ -191,9 +188,9 @@ Profile_Scope_Block::Profile_Scope_Block(Thread_Context *tctx, Profile_Global_Li
 }
 Profile_Scope_Block::Profile_Scope_Block(Application_Links *app, String_Const_u8 name,
                                          String_Const_u8 location){
-    Thread_Context *v_tctx = get_thread_context(app);
-    Profile_Global_List *v_list = get_core_profile_list(app);
-    profile_block__init(v_tctx, v_list, name, location, this);
+    Thread_Context *tctx = get_thread_context(app);
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_block__init(tctx, list, name, location, this);
 }
 Profile_Scope_Block::~Profile_Scope_Block(){
     this->close_now();
@@ -201,33 +198,8 @@ Profile_Scope_Block::~Profile_Scope_Block(){
 }
 void
 Profile_Scope_Block::close_now(){
-    if (!this->is_closed){
-        thread_profile_record_pop(this->tctx, system_now_time(), this->id);
-        this->is_closed = true;
-    }
+    profile_block__close(this);
 }
 
-////////////////////////////////
-
-CUSTOM_COMMAND_SIG(profile_enable)
-CUSTOM_DOC("Allow 5ed's self profiler to gather new profiling information.")
-{
-    Profile_Global_List *list = get_core_profile_list(app);
-    profile_set_enabled(list, true, ProfileEnable_UserBit);
-}
-
-CUSTOM_COMMAND_SIG(profile_disable)
-CUSTOM_DOC("Prevent 5ed's self profiler from gathering new profiling information.")
-{
-    Profile_Global_List *list = get_core_profile_list(app);
-    profile_set_enabled(list, false, ProfileEnable_UserBit);
-}
-
-CUSTOM_COMMAND_SIG(profile_clear)
-CUSTOM_DOC("Clear all profiling information from 5ed's self profiler.")
-{
-    Profile_Global_List *list = get_core_profile_list(app);
-    profile_clear(list);
-}
 
 // BOTTOM

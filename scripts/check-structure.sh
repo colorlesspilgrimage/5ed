@@ -29,11 +29,13 @@ trap 'rm -rf "$TMP"' EXIT
 count_sym() {
     nm -C --defined-only "$1" | awk -v types="$2" -v sym="$3" '
         /^[0-9a-fA-F]+ [A-Za-z] / {
+            addr = $1
             type = $2
             $1 = ""; $2 = ""; sub(/^ +/, "")
-            if (index(types, type) > 0 && $0 == sym) n++
+            if (index(types, type) > 0 && $0 == sym) seen[addr] = 1
         }
-        END { print n + 0 }'
+        END { n = 0; for (a in seen) n++; print n + 0 }
+    '
 }
 
 pass() {
@@ -140,7 +142,7 @@ while IFS= read -r line; do
     rel=${file#src/}
     layer=${rel%%/*}
     case "$rel" in
-        base/per_target/*|base/generated/*) continue ;;
+        base/generated/*) continue ;;
     esac
     top=${inc%%/*}
     ok=0
@@ -181,6 +183,9 @@ once=(
     5ed_mem.cpp
     5ed_malloc_allocator.cpp
     5ed_stdio_file.cpp
+    5ed_command_map.cpp
+    5ed_system_helpers.cpp
+    5ed_system_allocator.cpp
 )
 cpp_bad=0
 for name in "${once[@]}"; do
@@ -225,10 +230,24 @@ else
         comm -12 "$TMP/base-syms.txt" "$TMP/other-syms.txt" | head -20
         sym_ok=0
     fi
-    for bin in "$BUILD/5ed" "$BUILD/5ed_app.so" "$BUILD/custom_5ed.so"; do
+    for bin in "$BUILD/5ed"; do
         count=$(count_sym "$bin" TtWw "i32_ceil32(float)")
         if [ "$count" -ne 1 ]; then
             echo "FAIL: define-once $bin i32_ceil32 count $count"
+            sym_ok=0
+        fi
+    done
+    for sym in \
+        "mapping_init(Thread_Context*, Mapping*)" \
+        "Mutex_Lock::Mutex_Lock(Plat_Handle)" \
+        "Scratch_Block::Scratch_Block(Application_Links*)" \
+        "make_arena_system()" \
+        "Profile_Block::Profile_Block(Application_Links*, String_Const_u8, String_Const_u8)" \
+        "font_set_face_from_id(Font_Set*, unsigned int)"
+    do
+        count=$(count_sym "$BUILD/5ed" TtWw "$sym")
+        if [ "$count" -ne 1 ]; then
+            echo "FAIL: define-once $BUILD/5ed count $count for $sym"
             sym_ok=0
         fi
     done
@@ -246,27 +265,36 @@ else
     fail_check "ship-files"
 fi
 
-# 10. no-dynamic-export
-# The .so files must not export base functions or the per-target command map
-# functions. Each binary keeps a private copy. Exported copies can bind to the
-# copy in the other binary.
-export_bad=0
-for bin in "$BUILD/5ed_app.so" "$BUILD/custom_5ed.so"; do
-    if [ ! -f "$bin" ]; then
-        echo "FAIL: no-dynamic-export missing $bin"
-        export_bad=1
-        continue
-    fi
-    nm -D -C --defined-only "$bin" | awk '{ $1=""; $2=""; sub(/^ +/, ""); print }' | sort -u > "$TMP/dyn-syms.txt"
-    if grep -E "^(mapping_|mapping__|map_|map__|command_trigger_)" "$TMP/dyn-syms.txt" > "$TMP/dyn-bad.txt" ||
-       { [ -f "$TMP/base-syms.txt" ] && comm -12 "$TMP/base-syms.txt" "$TMP/dyn-syms.txt" > "$TMP/dyn-bad.txt" && [ -s "$TMP/dyn-bad.txt" ]; }; then
-        echo "FAIL: no-dynamic-export $bin exports:"
-        head -20 "$TMP/dyn-bad.txt"
-        export_bad=1
+# 10. no-shared-objects
+# The editor is one executable. It does not load a core library or a custom library.
+so_bad=0
+if [ -e src/base/per_target ]; then
+    echo "FAIL: no-shared-objects src/base/per_target exists"
+    so_bad=1
+fi
+if grep -rn "5ed_app\.so\|custom_5ed\.so\|custom_dll\|CLAct_CustomDLL\|get_version\|init_apis" src CMakeLists.txt > "$TMP/so-src.txt"; then
+    echo "FAIL: no-shared-objects source hit"
+    cat "$TMP/so-src.txt"
+    so_bad=1
+fi
+if grep -rn "per-target" CMakeLists.txt src > "$TMP/so-pt.txt"; then
+    echo "FAIL: no-shared-objects per-target text"
+    cat "$TMP/so-pt.txt"
+    so_bad=1
+fi
+if readelf -d "$BUILD/5ed" | grep -E '5ed_app\.so|custom_5ed\.so' > "$TMP/so-need.txt"; then
+    echo "FAIL: no-shared-objects NEEDED"
+    cat "$TMP/so-need.txt"
+    so_bad=1
+fi
+for so in "$BUILD/5ed_app.so" "$BUILD/custom_5ed.so"; do
+    if [ -e "$so" ]; then
+        echo "FAIL: no-shared-objects stale $so"
+        so_bad=1
     fi
 done
-if [ "$export_bad" -eq 0 ]; then
-    pass "no-dynamic-export"
+if [ "$so_bad" -eq 0 ]; then
+    pass "no-shared-objects"
 else
     fail=1
 fi

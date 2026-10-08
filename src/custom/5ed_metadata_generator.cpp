@@ -15,9 +15,9 @@
 #include "base/5ed_mem.h"
 #include "base/5ed_token.h"
 #include "base/generated/lexer_cpp.h"
+#include "base/5ed_lexer_cpp_api.h"
 
 
-#include "base/generated/lexer_cpp.cpp"
 
 #include "base/5ed_stdio_file.h"
 

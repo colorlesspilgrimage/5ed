@@ -16,7 +16,6 @@
 #define frame_useconds (Million(1) / FPS)
 #define frame_nseconds (Billion(1) / FPS)
 #define SLASH '/'
-#define DLL "so"
 
 #include "base/5ed_base_types.h"
 #include "base/5ed_stringf.h"
@@ -36,7 +35,6 @@
 #include "base/5ed_system_types.h"
 #include "core/5ed_font_interface.h"
 
-#define STATIC_LINK_API
 #include "base/generated/system_api.h"
 
 #define STATIC_LINK_API
@@ -47,19 +45,12 @@
 
 #include "core/5ed_font_set.h"
 #include "core/5ed_render_target.h"
-// Per-target API-bound files. See CMakeLists.txt.
-#include "base/per_target/5ed_search_list.h"
 #include "core/5ed.h"
 
-#include "base/generated/system_api.cpp"
 #include "base/generated/graphics_api.cpp"
 #include "base/generated/font_api.cpp"
 
 
-#include "base/per_target/5ed_system_allocator.cpp"
-
-#include "core/5ed_font_set.cpp"
-#include "base/per_target/5ed_search_list.cpp"
 #include "platform/5ed_font_provider_freetype.h"
 #include "platform/5ed_font_provider_freetype.cpp"
 
@@ -95,7 +86,6 @@
 #define function static
 #undef Cursor
 
-//#include <fontconfig/fontconfig.h>
 #define internal static
 
 #include <GL/glx.h>
@@ -106,7 +96,7 @@
 fprintf(stderr, "%s: " fmt "\n", __func__, ##__VA_ARGS__);\
 } while (0)
 
-// I want to see a message
+// Print the assert text, then stop.
 #undef AssertBreak
 #define AssertBreak(m) ({\
 fprintf(stderr, "\n** ASSERTION FAILURE: %s:%d: %s\n\n", __FILE__, __LINE__, #m);\
@@ -165,7 +155,6 @@ struct Linux_Vars {
     int xfixes_selection_event;
     XIM xim;
     XIC xic;
-    //FcConfig* fontconfig;
     XkbDescPtr xkb;
     
     Linux_Input_Chunk input;
@@ -227,7 +216,7 @@ global Render_Target render_target;
 
 ////////////////////////////
 
-// Defererencing an epoll_event's .data.ptr will always give one of these event types.
+// An epoll_event data.ptr is one of these event types.
 
 typedef i32 Epoll_Kind;
 enum {
@@ -238,10 +227,8 @@ enum {
     EPOLL_USER_TIMER,
 };
 
-// Where per-event epoll data is not needed, .data.ptr will point to one of
-// these static vars below.
-// If per-event data is needed, container_of can be used on data.ptr
-// to access the containing struct and all its other members.
+// Static tags are for events with no extra data.
+// Use container_of when the event needs more fields.
 
 internal Epoll_Kind epoll_tag_step_timer = EPOLL_STEP_TIMER;
 internal Epoll_Kind epoll_tag_x11 = EPOLL_X11;
@@ -719,14 +706,10 @@ glx_create_context(GLXFBConfig fb_config){
     XSync(linuxvars.dpy, False);
     XSetErrorHandler(old_handler);
     
-    //b32 direct = glXIsDirect(linuxvars.dpy, ctx);
     
-    //LOG("Making context current\n");
     glXMakeCurrent(linuxvars.dpy, linuxvars.win, ctx);
     
-    //glx_enable_vsync();
     
-    // NOTE(allen): Load gl functions
 #define GL_FUNC(f,R,P) GLXLOAD(f)
 #include "platform/opengl/5ed_opengl_funcs.h"
     
@@ -904,7 +887,7 @@ linux_x11_init(int argc, char** argv, Plat_Settings* settings) {
         linuxvars.xim = XOpenIM(dpy, 0, 0, 0);
     }
     
-    // If it still isn't there we're screwed.
+    // No input method is available.
     if (!linuxvars.xim){
         system_error_box("Could not initialize X Input.");
     }
@@ -1331,13 +1314,12 @@ linux_clipboard_recv(XSelectionEvent* ev) {
     }
 }
 
-internal
 system_get_clipboard_sig(){
     // TODO(inso): index?
     return(push_string_copy(arena, linuxvars.clipboard_contents));
 }
 
-internal void
+void
 system_post_clipboard(String_Const_u8 str, i32 index){
     // TODO(inso): index?
     //LINUX_FN_DEBUG("%.*s", string_expand(str));
@@ -1346,13 +1328,13 @@ system_post_clipboard(String_Const_u8 str, i32 index){
     XSetSelectionOwner(linuxvars.dpy, linuxvars.atom_CLIPBOARD, linuxvars.win, CurrentTime);
 }
 
-internal void
+void
 system_set_clipboard_catch_all(b32 enabled){
     LINUX_FN_DEBUG("%d", enabled);
     linuxvars.clipboard_catch_all = !!enabled;
 }
 
-internal b32
+b32
 system_get_clipboard_catch_all(void){
     return linuxvars.clipboard_catch_all;
 }
@@ -1759,14 +1741,11 @@ main(int argc, char **argv){
     pthread_mutex_init(&linuxvars.audio_mutex, &attr);
     pthread_cond_init(&linuxvars.audio_cond, NULL);
     
-    // NOTE(allen): context setup
     {
         Base_Allocator* alloc = get_base_allocator_system();
         thread_ctx_init(&linuxvars.tctx, ThreadKind_Main, alloc, alloc);
     }
     
-    API_VTable_system system_vtable = {};
-    system_api_fill_vtable(&system_vtable);
     
     API_VTable_graphics graphics_vtable = {};
     graphics_api_fill_vtable(&graphics_vtable);
@@ -1774,12 +1753,10 @@ main(int argc, char **argv){
     API_VTable_font font_vtable = {};
     font_api_fill_vtable(&font_vtable);
     
-    // NOTE(allen): memory
     linuxvars.frame_arena = make_arena_system();
     linuxvars.clipboard_arena = make_arena_system();
     render_target.arena = make_arena_system(KB(256));
     
-    //linuxvars.fontconfig = FcInitLoadConfigAndFonts();
     
     linuxvars.cursor_show = MouseCursorShow_Always;
     linuxvars.prev_cursor_show = MouseCursorShow_Always;
@@ -1790,39 +1767,12 @@ main(int argc, char **argv){
     
     linuxvars.clipboard_catch_all = false;
     
-    // NOTE(allen): load core
-    System_Library core_library = {};
-    App_Functions app = {};
-    {
-        App_Get_Functions *get_funcs = 0;
-        Scratch_Block scratch(&linuxvars.tctx);
-        List_String_Const_u8 search_list = {};
-        def_search_list_add_system_path(scratch, &search_list, SystemPath_Binary);
-        
-        String_Const_u8 core_path = def_search_get_full_path(scratch, &search_list, SCu8("5ed_app.so"));
-        if (system_load_library(scratch, core_path, &core_library)){
-            get_funcs = (App_Get_Functions*)system_get_proc(core_library, "app_get_functions");
-            if (get_funcs != 0){
-                app = get_funcs();
-            }
-            else{
-                char msg[] = "Failed to get application code from '5ed_app.so'.";
-                system_error_box(msg);
-            }
-        }
-        else{
-            char msg[] = "Could not load '5ed_app.so'. This file should be in the same directory as the main '5ed' executable.";
-            system_error_box(msg);
-        }
-    }
+    App_Functions app = app_get_functions();
     
-    // NOTE(allen): send system vtable to core
-    app.load_vtables(&system_vtable, &font_vtable, &graphics_vtable);
-    // get_logger calls log_init which is needed.
-    //app.get_logger();
+    app.load_vtables(&font_vtable, &graphics_vtable);
+    // get_logger runs log_init.
     linuxvars.log_string = app.get_logger();
     
-    // NOTE(allen): init & command line parameters
     Plat_Settings plat_settings = {};
     void *base_ptr = 0;
     {
@@ -1832,80 +1782,12 @@ main(int argc, char **argv){
         char **files = 0;
         i32 *file_count = 0;
         base_ptr = app.read_command_line(&linuxvars.tctx, curdir, &plat_settings, &files, &file_count, argc, argv);
-        /* TODO(inso): what is this doing?
-        {
-            i32 end = *file_count;
-            i32 i = 0, j = 0;
-            for (; i < end; ++i){
-                if (system_file_can_be_made(scratch, (u8*)files[i])){
-                    files[j] = files[i];
-                    ++j;
-                }
-            }
-            *file_count = j;
-        }*/
     }
     
-    // NOTE(allen): setup user directory override
     if (plat_settings.user_directory != 0){
         lnx_override_user_directory = plat_settings.user_directory;
     }
     
-    // NOTE(allen): load custom layer
-    System_Library custom_library = {};
-    Custom_API custom = {};
-    {
-        char custom_not_found_msg[] = "Did not find a library for the custom layer.";
-        char custom_fail_load_msg[] = "Failed to load custom code due to missing version information.  Try rebuilding with buildsuper.";
-        char custom_fail_version_msg[] = "Failed to load custom code due to a version mismatch.  Try rebuilding with buildsuper.";
-        char custom_fail_init_apis[] = "Failed to load custom code due to missing 'init_apis' symbol.  Try rebuilding with buildsuper";
-        
-        Scratch_Block scratch(&linuxvars.tctx);
-        String_Const_u8 default_file_name = string_u8_litexpr("custom_5ed.so");
-        List_String_Const_u8 search_list = {};
-        def_search_list_add_system_path(scratch, &search_list, SystemPath_UserDirectory);
-        def_search_list_add_system_path(scratch, &search_list, SystemPath_Binary);
-        String_Const_u8 custom_file_names[2] = {};
-        i32 custom_file_count = 1;
-        if (plat_settings.custom_dll != 0){
-            custom_file_names[0] = SCu8(plat_settings.custom_dll);
-            if (!plat_settings.custom_dll_is_strict){
-                custom_file_names[1] = default_file_name;
-                custom_file_count += 1;
-            }
-        }
-        else{
-            custom_file_names[0] = default_file_name;
-        }
-        String_Const_u8 custom_file_name = {};
-        for (i32 i = 0; i < custom_file_count; i += 1){
-            custom_file_name = def_search_get_full_path(scratch, &search_list, custom_file_names[i]);
-            if (custom_file_name.size > 0){
-                break;
-            }
-        }
-        b32 has_library = false;
-        if (custom_file_name.size > 0){
-            if (system_load_library(scratch, custom_file_name, &custom_library)){
-                has_library = true;
-            }
-        }
-        
-        if (!has_library){
-            system_error_box(custom_not_found_msg);
-        }
-        custom.get_version = (_Get_Version_Type*)system_get_proc(custom_library, "get_version");
-        if (custom.get_version == 0){
-            system_error_box(custom_fail_load_msg);
-        }
-        else if (custom.get_version(MAJOR, MINOR, PATCH) == 0){
-            system_error_box(custom_fail_version_msg);
-        }
-        custom.init_apis = (_Init_APIs_Type*)system_get_proc(custom_library, "init_apis");
-        if (custom.init_apis == 0){
-            system_error_box(custom_fail_init_apis);
-        }
-    }
     
     linux_x11_init(argc, argv, &plat_settings);
     linux_keycode_init(linuxvars.dpy);
@@ -1914,11 +1796,10 @@ main(int argc, char **argv){
     linuxvars.audio_thread = system_thread_launch(&linux_audio_main, NULL);
     
     
-    // app init
     {
         Scratch_Block scratch(&linuxvars.tctx);
         String_Const_u8 curdir = system_get_path(scratch, SystemPath_CurrentDirectory);
-        app.init(&linuxvars.tctx, &render_target, base_ptr, curdir, custom);
+        app.init(&linuxvars.tctx, &render_target, base_ptr, curdir);
     }
     
     linuxvars.global_frame_mutex = system_mutex_make();
@@ -1944,7 +1825,6 @@ main(int argc, char **argv){
         if (num_events == -1){
             if (errno != EINTR){
                 perror("epoll_wait");
-                //LOG("epoll_wait\n");
             }
             continue;
         }
@@ -1955,8 +1835,7 @@ main(int argc, char **argv){
         
         linuxvars.last_step_time = system_now_time();
         
-        // NOTE(allen): Frame Clipboard Input
-        // Request clipboard contents from X11 on first step, or every step if they don't have XFixes notification ability.
+        // Ask X11 for the clipboard on the first step, or each step without XFixes.
         if (first_step || (!linuxvars.has_xfixes && linuxvars.clipboard_catch_all)){
             XConvertSelection(linuxvars.dpy, linuxvars.atom_CLIPBOARD, linuxvars.atom_UTF8_STRING, linuxvars.atom_CLIPBOARD, linuxvars.win, CurrentTime);
         }
@@ -1983,23 +1862,19 @@ main(int argc, char **argv){
         input.mouse.release_r = linuxvars.input.trans.mouse_r_release;
         input.mouse.wheel = linuxvars.input.trans.mouse_wheel;
         
-        // NOTE(allen): Application Core Update
         Application_Step_Result result = {};
         if (app.step != 0){
             result = app.step(&linuxvars.tctx, &render_target, base_ptr, &input);
         }
         
-        // NOTE(allen): Finish the Loop
         if (result.perform_kill){
             break;
         }
         
-        // NOTE(NAME): Switch to New Title
         if (result.has_new_title){
             XStoreName(linuxvars.dpy, linuxvars.win, result.title_string);
         }
         
-        // NOTE(allen): Switch to New Cursor
         if (result.mouse_cursor_type != linuxvars.cursor && !linuxvars.input.pers.mouse_l){
             XCursor c = linuxvars.xcursors[result.mouse_cursor_type];
             if (linuxvars.cursor_show){
@@ -2013,7 +1888,6 @@ main(int argc, char **argv){
         
         // TODO(allen): don't let the screen size change until HERE after the render
         
-        // NOTE(allen): Schedule a step if necessary
         if (result.animating){
             linux_schedule_step();
         }
@@ -2027,5 +1901,5 @@ main(int argc, char **argv){
     return 0;
 }
 
-// NOTE(inso): to prevent me continuously messing up indentation
+// Keep this indent style.
 // vim: et:ts=4:sts=4:sw=4

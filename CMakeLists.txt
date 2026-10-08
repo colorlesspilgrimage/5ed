@@ -21,17 +21,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Everything is placed beside the executable: it finds 5ed_app.so, custom_5ed.so,
-# fonts/, themes/ and config files relative to its own location.
+# Put the executable in the build directory.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+# Old builds made a core library and a custom library. The editor does not use
+# them now. Remove them and their object folders from an old build folder.
+foreach(old_library 5ed_app custom_5ed)
+    file(REMOVE ${CMAKE_BINARY_DIR}/${old_library}.so)
+    file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/CMakeFiles/${old_library}.dir)
+endforeach()
 
 find_package(Threads REQUIRED)
 find_package(X11 REQUIRED COMPONENTS Xfixes)
 find_package(OpenGL REQUIRED)
 find_package(Freetype REQUIRED)
 
-# Settings shared by every target in the project.
 # One include root: paths are base/, core/, custom/ and platform/.
 add_library(5ed_common INTERFACE)
 target_include_directories(5ed_common INTERFACE ${PROJECT_SOURCE_DIR}/src)
@@ -43,22 +47,7 @@ target_compile_options(5ed_common INTERFACE
     -Wno-missing-declarations)
 target_link_libraries(5ed_common INTERFACE Threads::Threads)
 
-# Compiled once. The per-target files are listed below. They call the system or
-# custom API through a different link mode in each binary. They stay compiled
-# per binary until ROADMAP point 3.
-# per-target: src/base/per_target/5ed_system_allocator.cpp
-# per-target: src/base/per_target/5ed_app_links_allocator.cpp
-# per-target: src/base/per_target/5ed_system_helpers.cpp
-# per-target: src/base/per_target/5ed_profile.cpp
-# per-target: src/base/per_target/5ed_profile_static_enable.cpp
-# per-target: src/base/per_target/5ed_search_list.cpp
-# per-target: src/base/generated/custom_api.cpp
-# per-target: src/base/generated/system_api.cpp
-# per-target: src/base/generated/font_api.cpp
-# per-target: src/base/generated/graphics_api.cpp
-# per-target: src/base/generated/lexer_cpp.cpp
-# per-target: src/core/5ed_font_set.cpp
-# per-target: src/base/per_target/5ed_command_map.cpp
+# 5ed_base is compiled once and is linked into the one executable.
 add_library(5ed_base STATIC
     src/base/5ed_base_types.cpp
     src/base/5ed_stringf.cpp
@@ -74,20 +63,18 @@ add_library(5ed_base STATIC
     src/base/5ed_doc_content_types.cpp
     src/base/5ed_mem.cpp
     src/base/5ed_malloc_allocator.cpp
-    src/base/5ed_stdio_file.cpp)
+    src/base/5ed_stdio_file.cpp
+    src/base/5ed_command_map.cpp
+    src/base/5ed_lexer_cpp_unit.cpp
+    src/base/5ed_system_helpers.cpp
+    src/base/5ed_system_allocator.cpp)
 target_link_libraries(5ed_base PUBLIC 5ed_common)
 set_target_properties(5ed_base PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
-
 ################################################################################
-# Custom layer: custom_5ed.so
-#
-# Build the command table from the custom layer.
-# Preprocess that layer with -DMETA_PASS.
-# metadata_generator reads that output and writes the table.
-# Compile the layer again with the generated files.
-# Keep the output in the build tree.
-# Paths in the table are relative to the source root.
+# Custom layer.
+# Table paths are relative to the source root.
+# Keep the generated table in the build tree.
 
 add_executable(metadata_generator src/custom/5ed_metadata_generator.cpp)
 target_link_libraries(metadata_generator PRIVATE 5ed_common 5ed_base)
@@ -110,28 +97,30 @@ add_custom_command(
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Generating command metadata"
     VERBATIM)
+add_custom_target(command_metadata DEPENDS ${GENERATED_METADATA})
 
 # managed_id_metadata.cpp is #included by 5ed_default_bindings.cpp, not compiled on its own.
 set_source_files_properties(${GENERATED_METADATA} PROPERTIES HEADER_FILE_ONLY TRUE)
-add_library(custom_5ed SHARED src/custom/5ed_default_bindings.cpp ${GENERATED_METADATA})
-target_include_directories(custom_5ed PRIVATE ${GENERATED_ROOT})
-target_link_libraries(custom_5ed PRIVATE 5ed_common 5ed_base)
-set_target_properties(custom_5ed PROPERTIES PREFIX "" SUFFIX ".so")
+add_library(5ed_custom OBJECT src/custom/5ed_default_bindings.cpp ${GENERATED_METADATA})
+target_include_directories(5ed_custom PRIVATE ${GENERATED_ROOT})
+target_link_libraries(5ed_custom PRIVATE 5ed_common 5ed_base)
 
 ################################################################################
-# Core: 5ed_app.so
+# Core.
 
-add_library(5ed_app SHARED src/core/5ed_app_target.cpp)
-target_link_libraries(5ed_app PRIVATE 5ed_common 5ed_base)
-set_target_properties(5ed_app PROPERTIES PREFIX "" SUFFIX ".so")
+add_library(5ed_core OBJECT src/core/5ed_app_target.cpp)
+target_link_libraries(5ed_core PRIVATE 5ed_common 5ed_base)
 
 ################################################################################
 # Platform layer: 5ed
 
 add_executable(5ed src/platform/linux/linux_5ed.cpp)
 target_compile_options(5ed PRIVATE -fno-threadsafe-statics)
-target_link_libraries(5ed PRIVATE 5ed_common 5ed_base
+target_link_libraries(5ed PRIVATE 5ed_core 5ed_custom 5ed_common 5ed_base
     X11::X11 X11::Xfixes OpenGL::GL Freetype::Freetype ${CMAKE_DL_LIBS} m rt)
+
+# Release does not use link-time optimization.
+# IPO warns about OpenGL function pointer types. See ROADMAP item 3 and item 6.
 
 ################################################################################
 # Runtime files (fonts, themes, default config and bindings) beside the binary.
@@ -141,7 +130,7 @@ add_custom_target(5ed_runtime_files ALL
             ${PROJECT_SOURCE_DIR}/ship_files ${CMAKE_BINARY_DIR}
     COMMENT "Copying ship_files"
     VERBATIM)
-add_dependencies(5ed 5ed_runtime_files custom_5ed 5ed_app)
+add_dependencies(5ed 5ed_runtime_files)
 
 ################################################################################
 # Developer tools are not part of the default build.
@@ -199,11 +188,13 @@ add_dependencies(check-structure 5ed check-tools)
 
 # Parses a new project.5ed from setup_new_project, this repo's project.5ed and
 # the shipped config.5ed with the real config parser. Not part of ALL.
-add_executable(test_project_file EXCLUDE_FROM_ALL src/custom/tests/5ed_project_file_test.cpp)
+add_executable(test_project_file EXCLUDE_FROM_ALL
+    src/custom/tests/5ed_project_file_test.cpp
+    src/custom/tests/5ed_project_file_stubs.cpp)
 target_include_directories(test_project_file PRIVATE ${GENERATED_ROOT})
-target_link_libraries(test_project_file PRIVATE 5ed_common 5ed_base)
-# custom_5ed makes the generated command metadata that the test includes.
-add_dependencies(test_project_file custom_5ed)
+target_link_libraries(test_project_file PRIVATE 5ed_common 5ed_base 5ed_core)
+# command_metadata makes the generated command metadata that the test includes.
+add_dependencies(test_project_file command_metadata)
 add_custom_target(check-project-file
     COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/test-project
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/test-project
@@ -212,8 +203,18 @@ add_custom_target(check-project-file
     DEPENDS test_project_file
     VERBATIM)
 
+# Parses command lines with the real core parser. Not part of ALL.
+add_executable(test_command_line EXCLUDE_FROM_ALL
+    src/core/tests/5ed_command_line_test.cpp
+    src/custom/tests/5ed_project_file_stubs.cpp)
+target_link_libraries(test_command_line PRIVATE 5ed_common 5ed_base 5ed_core)
+add_custom_target(check-command-line
+    COMMAND test_command_line
+    DEPENDS test_command_line
+    VERBATIM)
+
 # Security regression checks. See scripts/check-security.sh.
 add_custom_target(check-security
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-security.sh ${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}
-    DEPENDS 5ed_base
+    DEPENDS 5ed_base 5ed
     VERBATIM)

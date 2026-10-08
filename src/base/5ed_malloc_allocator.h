@@ -17,4 +17,13 @@ make_arena_malloc(u64 chunk_size);
 Arena
 make_arena_malloc(void);
 
+Base_Allocator*
+get_base_allocator_system(void);
+Arena
+make_arena_system(u64 chunk_size, u64 align);
+Arena
+make_arena_system(u64 chunk_size);
+Arena
+make_arena_system(void);
+
 #endif

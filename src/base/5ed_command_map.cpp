@@ -1,3 +1,5 @@
+#include "base/5ed_base.h"
+
 /*
 5ed_command_map.cpp - Command management functions
 */
@@ -28,15 +30,22 @@ mapping__key(Input_Event_Kind kind, u32 sub_code){
     return((((u64)kind) << 32) | sub_code);
 }
 
-Command_Map*
-mapping__alloc_map(Mapping *mapping){
-    Command_Map *result = mapping->free_maps;
+
+template <typename T>
+static T*
+mapping__take_free(T **free_head, Arena *arena){
+    T *result = *free_head;
     if (result != 0){
-        sll_stack_pop(mapping->free_maps);
+        *free_head = result->next;
     }
     else{
-        result = push_array(&mapping->node_arena, Command_Map, 1);
+        result = push_array(arena, T, 1);
     }
+    return(result);
+}
+Command_Map*
+mapping__alloc_map(Mapping *mapping){
+    Command_Map *result = mapping__take_free(&mapping->free_maps, &mapping->node_arena);
     zdll_push_back(mapping->first_map, mapping->last_map, result);
     return(result);
 }
@@ -49,13 +58,7 @@ mapping__free_map(Mapping *mapping, Command_Map *map){
 
 Command_Modified_Binding*
 mapping__alloc_modified_binding(Mapping *mapping){
-    Command_Modified_Binding *result = mapping->free_bindings;
-    if (result != 0){
-        sll_stack_pop(mapping->free_bindings);
-    }
-    else{
-        result = push_array(&mapping->node_arena, Command_Modified_Binding, 1);
-    }
+    Command_Modified_Binding *result = mapping__take_free(&mapping->free_bindings, &mapping->node_arena);
     return(result);
 }
 
@@ -66,13 +69,7 @@ mapping__free_modified_binding(Mapping *mapping, Command_Modified_Binding *bindi
 
 Command_Binding_List*
 mapping__alloc_binding_list(Mapping *mapping){
-    Command_Binding_List *result = mapping->free_lists;
-    if (result != 0){
-        sll_stack_pop(mapping->free_lists);
-    }
-    else{
-        result = push_array(&mapping->node_arena, Command_Binding_List, 1);
-    }
+    Command_Binding_List *result = mapping__take_free(&mapping->free_lists, &mapping->node_arena);
     return(result);
 }
 
@@ -181,21 +178,16 @@ mapping_release_map(Mapping *mapping, Command_Map *map){
 
 ////////////////////////////////
 
-b32
-map_strict_match(Input_Modifier_Set *binding_mod_set, Input_Modifier_Set *event_mod_set, Key_Code skip_self_mod){
+static b32
+map_set_has_mods(Input_Modifier_Set *need, Input_Modifier_Set *have, b32 use_skip, Key_Code skip){
     b32 result = true;
-    i32 binding_mod_count = binding_mod_set->count;
-    Key_Code *binding_mods = binding_mod_set->mods;
-    for (i32 i = 0; i < binding_mod_count; i += 1){
-        if (!has_modifier(event_mod_set, binding_mods[i])){
-            result = false;
-            break;
+    i32 count = need->count;
+    Key_Code *mods = need->mods;
+    for (i32 i = 0; i < count; i += 1){
+        if (use_skip && mods[i] == skip){
+            continue;
         }
-    }
-    i32 mod_count = event_mod_set->count;
-    Key_Code *mods = event_mod_set->mods;
-    for (i32 i = 0; i < mod_count; i += 1){
-        if (mods[i] != skip_self_mod && !has_modifier(binding_mod_set, mods[i])){
+        if (!has_modifier(have, mods[i])){
             result = false;
             break;
         }
@@ -204,17 +196,17 @@ map_strict_match(Input_Modifier_Set *binding_mod_set, Input_Modifier_Set *event_
 }
 
 b32
-map_loose_match(Input_Modifier_Set *binding_mod_set, Input_Modifier_Set *event_mod_set){
-    b32 result = true;
-    i32 binding_mod_count = binding_mod_set->count;
-    Key_Code *binding_mods = binding_mod_set->mods;
-    for (i32 i = 0; i < binding_mod_count; i += 1){
-        if (!has_modifier(event_mod_set, binding_mods[i])){
-            result = false;
-            break;
-        }
+map_strict_match(Input_Modifier_Set *binding_mod_set, Input_Modifier_Set *event_mod_set, Key_Code skip_self_mod){
+    b32 result = map_set_has_mods(binding_mod_set, event_mod_set, false, 0);
+    if (result){
+        result = map_set_has_mods(event_mod_set, binding_mod_set, true, skip_self_mod);
     }
     return(result);
+}
+
+b32
+map_loose_match(Input_Modifier_Set *binding_mod_set, Input_Modifier_Set *event_mod_set){
+    return(map_set_has_mods(binding_mod_set, event_mod_set, false, 0));
 }
 
 Map_Event_Breakdown
@@ -256,6 +248,30 @@ map_get_event_breakdown(Input_Event *event){
     return(result);
 }
 
+static Command_Binding
+map__match_in_list(Command_Binding_List *list, Input_Modifier_Set *event_mods,
+                   Key_Code skip_self_mod, Binding_Match_Rule rule){
+    Command_Binding result = {};
+    for (SNode *node = list->first;
+         node != 0;
+         node = node->next){
+        Command_Modified_Binding *mod_binding = CastFromMember(Command_Modified_Binding, order_node, node);
+        Input_Modifier_Set *binding_mod_set = &mod_binding->mods;
+        b32 match = false;
+        if (rule == BindingMatchRule_Strict){
+            match = map_strict_match(binding_mod_set, event_mods, skip_self_mod);
+        }
+        else if (rule == BindingMatchRule_Loose){
+            match = map_loose_match(binding_mod_set, event_mods);
+        }
+        if (match){
+            result = mod_binding->binding;
+            break;
+        }
+    }
+    return(result);
+}
+
 Command_Binding
 map_get_binding_non_recursive(Command_Map *map, Input_Event *event, Binding_Match_Rule rule){
     Command_Binding result = {};
@@ -275,36 +291,7 @@ map_get_binding_non_recursive(Command_Map *map, Input_Event *event, Binding_Matc
                 table_read(&map->event_code_to_binding_list, lookup, &val);
                 Command_Binding_List *list = (Command_Binding_List*)IntAsPtr(val);
                 if (breakdown.mod_set != 0){
-                    switch (rule){
-                        case BindingMatchRule_Strict:
-                        {
-                            for (SNode *node = list->first;
-                                 node != 0;
-                                 node = node->next){
-                                Command_Modified_Binding *mod_binding = CastFromMember(Command_Modified_Binding, order_node, node);
-                                Input_Modifier_Set *binding_mod_set = &mod_binding->mods;
-                                if (map_strict_match(binding_mod_set, breakdown.mod_set, breakdown.skip_self_mod)){
-                                    result = mod_binding->binding;
-                                    goto done;
-                                }
-                            }
-                        }break;
-                        
-                        case BindingMatchRule_Loose:
-                        {
-                            for (SNode *node = list->first;
-                                 node != 0;
-                                 node = node->next){
-                                Command_Modified_Binding *mod_binding = CastFromMember(Command_Modified_Binding, order_node, node);
-                                Input_Modifier_Set *binding_mod_set = &mod_binding->mods;
-                                if (map_loose_match(binding_mod_set, breakdown.mod_set)){
-                                    result = mod_binding->binding;
-                                    goto done;
-                                }
-                            }
-                        }break;
-                    }
-                    done:;
+                    result = map__match_in_list(list, breakdown.mod_set, breakdown.skip_self_mod, rule);
                 }
                 else{
                     Command_Modified_Binding *mod_binding = CastFromMember(Command_Modified_Binding, order_node, list->first);

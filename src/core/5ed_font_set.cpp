@@ -117,7 +117,7 @@ font_set_release_face(Font_Set *set, Face_ID id){
     return(result);
 }
 
-internal Face*
+Face*
 font_set_face_from_id(Font_Set *set, Face_ID id){
     Face *result = 0;
     Font_Face_Slot *slot = font_set__get_face_slot(set, id);

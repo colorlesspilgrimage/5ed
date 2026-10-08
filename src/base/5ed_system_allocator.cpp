@@ -1,8 +1,10 @@
 /*
- * 5ed malloc base allocator
+ * System memory base allocator.
  */
 
 // TOP
+
+#include "base/5ed_base.h"
 
 internal void*
 base_reserve__system(void *user_data, u64 size, u64 *size_out, String_Const_u8 location){
@@ -31,7 +33,7 @@ make_base_allocator_system(void){
 
 global Base_Allocator base_allocator_system = {};
 
-internal Base_Allocator*
+Base_Allocator*
 get_base_allocator_system(void){
     if (base_allocator_system.reserve == 0){
         base_allocator_system = make_base_allocator_system();
@@ -39,17 +41,17 @@ get_base_allocator_system(void){
     return(&base_allocator_system);
 }
 
-internal Arena
+Arena
 make_arena_system(u64 chunk_size, u64 align){
     return(make_arena(get_base_allocator_system(), chunk_size, align));
 }
 
-internal Arena
+Arena
 make_arena_system(u64 chunk_size){
     return(make_arena_system(chunk_size, 8));
 }
 
-internal Arena
+Arena
 make_arena_system(void){
     return(make_arena_system(KB(16), 8));
 }

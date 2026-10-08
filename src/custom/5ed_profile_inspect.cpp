@@ -95,8 +95,7 @@ profile_parse_record(Arena *arena, Profile_Inspection *insp,
             record = record->next;
         }
         else{
-            // NOTE(allen): This would mean that record exists and it's id
-            // is greater than id, but then the sub-call should not have returned!
+            // The record id is past this id, but the sub-call should have consumed it.
             InvalidPath;
         }
         
@@ -142,9 +141,7 @@ profile_parse(Arena *arena, Profile_Global_List *src){
         insp_thread->thread_id = node->thread_id;
         insp_thread->name = node->name;
         
-        // NOTE(allen): This is the "negative infinity" range.
-        // We will be "maxing" it against all the ranges durring the parse,
-        // to get the root range.
+        // Start at the inverted range. The parse widens it to the root range.
         Range_u64 time_range = {max_u64, 0};
         insp_thread->root.thread = insp_thread;
         profile_parse_record(arena, &result, &insp_thread->root, node->first_record, &time_range);
@@ -273,6 +270,26 @@ profile_qsort_nodes(Profile_Node **nodes, i32 first, i32 one_past_last){
     }
 }
 
+function b32
+profile_draw_row(Application_Links *app, Face_ID face_id, FColor line_color,
+                 Fancy_Line *line, Range_f32 x, Range_f32 y,
+                 f32 x_half_padding, f32 line_height, Vec2_f32 m_p,
+                 b32 draw_margin){
+    Vec2_f32 p = V2f32(x.min + x_half_padding,
+                       (y.min + y.max - line_height)*0.5f);
+    draw_fancy_line(app, face_id, line_color, line, p);
+    Rect_f32 box = Rf32(x, y);
+    b32 hover = rect_contains_point(box, m_p);
+    if (draw_margin){
+        FColor margin = fcolor_id(defcolor_margin);
+        if (hover){
+            margin = fcolor_id(defcolor_margin_hover);
+        }
+        draw_rectangle_outline_fcolor(app, box, 6.f, 3.f, margin);
+    }
+    return(hover);
+}
+
 function void
 profile_draw_node(Application_Links *app, View_ID view, Face_ID face_id,
                   Profile_Node *node, Rect_f32 rect,
@@ -280,7 +297,7 @@ profile_draw_node(Application_Links *app, View_ID view, Face_ID face_id,
     Range_f32 x = rect_range_x(rect);
     Range_f32 y = rect_range_y(rect);
     
-    // TODO(allen): share this shit
+    // TODO(allen): Share the face metric lookup.
     Face_Metrics metrics = get_face_metrics(app, face_id);
     f32 line_height = metrics.line_height;
     f32 normal_advance = metrics.normal_advance;
@@ -411,7 +428,6 @@ profile_draw_node(Application_Links *app, View_ID view, Face_ID face_id,
         x_pos = x.min + x_half_padding;
         f32 y_pos = info_box.y0;
         
-        // NOTE(allen): duration
         {
             f32 duration = ((f32)range_size(node->time))/1000000.f;
             Fancy_Line list = {};
@@ -449,20 +465,13 @@ profile_draw_node(Application_Links *app, View_ID view, Face_ID face_id,
             push_fancy_stringf(scratch, &line, fcolor_id(defcolor_pop2),
                                0.5f, 0.f, "%6.4f", child_duration);
             
-            Vec2_f32 p = V2f32(x.min + x_half_padding,
-                               (y.min + y.max - line_height)*0.5f);
-            draw_fancy_line(app, face_id, fcolor_id(defcolor_pop1), &line, p);
-            
-            Rect_f32 box = Rf32(x, y);
-            FColor margin = fcolor_id(defcolor_margin);
-            if (rect_contains_point(box, m_p)){
+            if (profile_draw_row(app, face_id, fcolor_id(defcolor_pop1), &line,
+                                 x, y, x_half_padding, line_height, m_p, true)){
                 insp->full_name_hovered = child_name;
                 insp->unique_counter_hovered = child->unique_counter;
                 insp->location_jump_hovered = profile_node_location(child);
                 insp->hover_node = child;
-                margin = fcolor_id(defcolor_margin_hover);
             }
-            draw_rectangle_outline_fcolor(app, box, 6.f, 3.f, margin);
             
             y_pos = y.max;
             if (y_pos >= info_box.y1){
@@ -499,7 +508,7 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
     Rect_f32 prev_clip = draw_set_clip(app, region);
     
     Face_ID face_id = get_face_id(app, 0);
-    // TODO(allen): share this shit
+    // TODO(allen): Share the face metric lookup.
     Face_Metrics metrics = get_face_metrics(app, face_id);
     f32 line_height = metrics.line_height;
     f32 normal_advance = metrics.normal_advance;
@@ -533,7 +542,6 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
         inspect->hover_slot = 0;
         inspect->hover_node = 0;
         
-        // NOTE(allen): tabs
         {
             f32 y = (tabs_y.min + tabs_y.max - line_height)*0.5f;
             f32 x = region.x0;
@@ -621,17 +629,10 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
                                        "active time %11.9f",
                                        active_time);
                     
-                    Vec2_f32 p = V2f32(x.min + x_half_padding,
-                                       (y.min + y.max - line_height)*0.5f);
-                    draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
-                    
-                    Rect_f32 box = Rf32(x, y);
-                    FColor margin = fcolor_id(defcolor_margin);
-                    if (rect_contains_point(box, m_p)){
+                    if (profile_draw_row(app, face_id, fcolor_zero(), &list,
+                                         x, y, x_half_padding, line_height, m_p, true)){
                         inspect->hover_thread = thread;
-                        margin = fcolor_id(defcolor_margin_hover);
                     }
-                    draw_rectangle_outline_fcolor(app, box, 6.f, 3.f, margin);
                     
                     y_pos = y.max;
                     if (y_pos >= tabs_body.max.y1){
@@ -668,21 +669,14 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
                     push_fancy_stringf(scratch, &list, fcolor_id(defcolor_keyword),
                                        "hit # %5d", node->hit_count);
                     
-                    Vec2_f32 p = V2f32(x.min + x_half_padding,
-                                       (y.min + y.max - line_height)*0.5f);
-                    draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
-                    
-                    Rect_f32 box = Rf32(x, y);
-                    FColor margin = fcolor_id(defcolor_margin);
-                    if (rect_contains_point(box, m_p)){
+                    if (profile_draw_row(app, face_id, fcolor_zero(), &list,
+                                         x, y, x_half_padding, line_height, m_p, true)){
                         if (name_too_long){
                             inspect->full_name_hovered = node->name;
                         }
                         inspect->location_jump_hovered = node->location;
                         inspect->hover_slot = node;
-                        margin = fcolor_id(defcolor_margin_hover);
                     }
-                    draw_rectangle_outline_fcolor(app, box, 6.f, 3.f, margin);
                     
                     y_pos = y.max;
                     if (y_pos >= tabs_body.max.y1){
@@ -705,17 +699,10 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
                     push_fancy_string(scratch, &list, fcolor_id(defcolor_pop2),
                                       node->message);
                     
-                    Vec2_f32 p = V2f32(x.min + x_half_padding,
-                                       (y.min + y.max - line_height)*0.5f);
-                    draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
-                    
-                    Rect_f32 box = Rf32(x, y);
-                    FColor margin = fcolor_id(defcolor_margin);
-                    if (rect_contains_point(box, m_p)){
+                    if (profile_draw_row(app, face_id, fcolor_zero(), &list,
+                                         x, y, x_half_padding, line_height, m_p, true)){
                         inspect->location_jump_hovered = node->location;
-                        margin = fcolor_id(defcolor_margin_hover);
                     }
-                    draw_rectangle_outline_fcolor(app, box, 6.f, 3.f, margin);
                     
                     y_pos = y.max;
                     if (y_pos >= tabs_body.max.y1){
@@ -783,15 +770,9 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
                     push_fancy_stringf(scratch, &list, fcolor_id(defcolor_pop1), "%.*s",
                                        string_expand(node->location));
                     
-                    Vec2_f32 p = V2f32(x.min + x_half_padding,
-                                       (y.min + y.max - line_height)*0.5f);
-                    draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
-                    
-                    Rect_f32 box = Rf32(x, y);
-                    FColor margin = fcolor_id(defcolor_margin);
-                    if (rect_contains_point(box, m_p)){
+                    if (profile_draw_row(app, face_id, fcolor_zero(), &list,
+                                         x, y, x_half_padding, line_height, m_p, false)){
                         inspect->location_jump_hovered = node->location;
-                        margin = fcolor_id(defcolor_margin_hover);
                     }
                     
                     y_pos = y.max;
@@ -936,5 +917,27 @@ CUSTOM_DOC("Inspect all currently collected profiling information in 5ed's self 
     
     profile_set_enabled(list, true, ProfileEnable_InspectBit);
 }
+
+CUSTOM_COMMAND_SIG(profile_enable)
+CUSTOM_DOC("Allow 5ed's self profiler to gather new profiling information.")
+{
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_set_enabled(list, true, ProfileEnable_UserBit);
+}
+
+CUSTOM_COMMAND_SIG(profile_disable)
+CUSTOM_DOC("Prevent 5ed's self profiler from gathering new profiling information.")
+{
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_set_enabled(list, false, ProfileEnable_UserBit);
+}
+
+CUSTOM_COMMAND_SIG(profile_clear)
+CUSTOM_DOC("Clear all profiling information from 5ed's self profiler.")
+{
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_clear(list);
+}
+
 
 // BOTTOM

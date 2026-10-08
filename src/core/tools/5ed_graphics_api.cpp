@@ -38,5 +38,10 @@ get_api_group(void){
     return(GeneratedGroup_Core);
 }
 
+function API_Generation_Flag
+get_api_flags(void){
+    return(0);
+}
+
 // BOTTOM
 

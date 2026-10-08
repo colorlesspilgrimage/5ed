@@ -15,8 +15,6 @@
 #define MAX_VIEWS 16
 
 struct Plat_Settings{
-    char *custom_dll;
-    b8 custom_dll_is_strict;
     b8 fullscreen_window;
     
     i32 window_w;
@@ -43,17 +41,11 @@ char **argv)
 
 typedef App_Read_Command_Line_Sig(App_Read_Command_Line);
 
-struct Custom_API{
-    _Get_Version_Type *get_version;
-    _Init_APIs_Type *init_apis;
-};
-
 #define App_Init_Sig(name) \
 void name(Thread_Context *tctx,     \
 Render_Target *target,    \
 void *base_ptr,           \
-String_Const_u8 current_directory,\
-Custom_API api)
+String_Const_u8 current_directory)
 
 typedef App_Init_Sig(App_Init);
 
@@ -87,8 +79,7 @@ typedef App_Step_Sig(App_Step);
 
 typedef b32 Log_Function(String_Const_u8 str);
 typedef Log_Function *App_Get_Logger(void);
-typedef void App_Load_VTables(API_VTable_system *vtable_system,
-                              API_VTable_font *vtable_font,
+typedef void App_Load_VTables(API_VTable_font *vtable_font,
                               API_VTable_graphics *vtable_graphics);
 
 struct App_Functions{
@@ -101,6 +92,8 @@ struct App_Functions{
 
 #define App_Get_Functions_Sig(name) App_Functions name()
 typedef App_Get_Functions_Sig(App_Get_Functions);
+
+extern "C" App_Functions app_get_functions();
 
 #endif
 

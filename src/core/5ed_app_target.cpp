@@ -33,7 +33,6 @@
 #include "base/5ed_token.h"
 
 #include "base/5ed_system_types.h"
-#define DYNAMIC_LINK_API
 #include "base/generated/system_api.h"
 #include "core/5ed_font_interface.h"
 #define DYNAMIC_LINK_API
@@ -41,8 +40,7 @@
 #define DYNAMIC_LINK_API
 #include "base/generated/font_api.h"
 
-// Per-target API-bound files. See CMakeLists.txt.
-#include "base/per_target/5ed_profile.h"
+#include "base/5ed_profile.h"
 #include "base/5ed_command_map.h"
 
 #include "core/5ed_render_target.h"
@@ -72,25 +70,19 @@
 #include "base/generated/lexer_cpp.h"
 #include "core/5ed_api_definition.h"
 #include "core/docs/5ed_doc_helper.h"
+#include "base/5ed_lexer_cpp_api.h"
 
 ////////////////////////////////
 
-#include "base/per_target/5ed_system_helpers.cpp"
-#include "base/per_target/5ed_app_links_allocator.cpp"
-#include "base/per_target/5ed_system_allocator.cpp"
-#include "base/per_target/5ed_profile.cpp"
-#include "base/per_target/5ed_profile_static_enable.cpp"
-#include "base/per_target/5ed_command_map.cpp"
+#include "core/5ed_app_links_allocator.cpp"
+#include "core/5ed_profile.cpp"
+#include "base/5ed_profile_macros.h"
 
 #include "base/generated/custom_api.cpp"
-#define DYNAMIC_LINK_API
-#include "base/generated/system_api.cpp"
 #define DYNAMIC_LINK_API
 #include "base/generated/graphics_api.cpp"
 #define DYNAMIC_LINK_API
 #include "base/generated/font_api.cpp"
-
-#include "base/generated/lexer_cpp.cpp"
 
 #include "core/5ed_api_definition.cpp"
 #include "base/generated/custom_api_constructor.cpp"

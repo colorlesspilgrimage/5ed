@@ -1,9 +1,11 @@
 /*
- * 5ed_profile_static_enable.cpp - Macro interface for self profiler.
+ * Macros for the self profiler.
  */
 
 // TOP
 
+#if !defined(FRED_PROFILE_MACROS_H)
+#define FRED_PROFILE_MACROS_H
 #if defined(ProfileBlock)
 #undef ProfileBlock
 #undef ProfileScope
@@ -55,6 +57,8 @@ Profile_Scope_Block M \
 
 
 #define ProfileCloseNow(B) ((B).close_now())
+
+#endif
 
 // BOTTOM
 

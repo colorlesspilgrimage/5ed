@@ -30,7 +30,6 @@
 #define DYNAMIC_LINK_API
 #include "base/generated/custom_api.h"
 #include "base/5ed_system_types.h"
-#define DYNAMIC_LINK_API
 #include "base/generated/system_api.h"
 #if !defined(META_PASS)
 #include "generated/command_metadata.h"
@@ -39,10 +38,10 @@
 #include "base/5ed_token.h"
 #include "base/generated/lexer_cpp.h"
 
+#include "base/5ed_lexer_cpp_api.h"
 #include "custom/5ed_variables.h"
 #include "custom/5ed_audio.h"
-// Per-target API-bound files. See CMakeLists.txt.
-#include "base/per_target/5ed_profile.h"
+#include "base/5ed_profile.h"
 #include "custom/5ed_async_tasks.h"
 #include "base/5ed_string_match.h"
 #include "custom/5ed_helper.h"
@@ -70,26 +69,18 @@
 #include "custom/5ed_log_parser.h"
 #include "custom/5ed_profile_inspect.h"
 #include "custom/5ed_tutorial.h"
-#include "base/per_target/5ed_search_list.h"
+#include "custom/5ed_search_list.h"
 
 ////////////////////////////////
 
-#include "base/per_target/5ed_app_links_allocator.cpp"
-#include "base/per_target/5ed_system_allocator.cpp"
-#include "base/per_target/5ed_command_map.cpp"
 
 
 #define DYNAMIC_LINK_API
 #include "base/generated/custom_api.cpp"
-#define DYNAMIC_LINK_API
-#include "base/generated/system_api.cpp"
-#include "base/per_target/5ed_system_helpers.cpp"
-#include "base/per_target/5ed_profile.cpp"
-#include "base/per_target/5ed_profile_static_enable.cpp"
+#include "base/5ed_profile_macros.h"
 #include "custom/5ed_custom.cpp"
 #include "custom/5ed_async_tasks.cpp"
 
-#include "base/generated/lexer_cpp.cpp"
 
 #include "custom/5ed_default_map.cpp"
 
@@ -133,7 +124,7 @@
 #include "custom/5ed_docs.cpp"
 #include "custom/5ed_variables.cpp"
 #include "custom/5ed_audio.cpp"
-#include "base/per_target/5ed_search_list.cpp"
+#include "custom/5ed_search_list.cpp"
 
 #include "custom/5ed_examples.cpp"
 

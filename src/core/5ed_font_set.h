@@ -37,6 +37,10 @@ struct Font_Set{
     f32 scale_factor;
 };
 
+struct Face;
+Face*
+font_set_face_from_id(Font_Set *set, Face_ID id);
+
 #endif
 
 // BOTTOM

@@ -1,5 +1,5 @@
 /*
- * 5ed app links base allocator
+ * Scratch_Block constructors that use Application_Links.
  */
 
 // TOP

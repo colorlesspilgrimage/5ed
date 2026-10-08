@@ -64,7 +64,6 @@ struct Models{
     Model_Wind_Down_Co *free_wind_downs;
     
     Child_Process_Container child_processes;
-    Custom_API config_api;
     
     Tick_Function *tick;
     Render_Caller_Function *render_caller;
@@ -180,7 +179,6 @@ struct File_Init{
 enum Command_Line_Action{
     CLAct_Nothing,
     CLAct_Ignore,
-    CLAct_CustomDLL,
     CLAct_WindowSize,
     CLAct_WindowMaximize,
     CLAct_WindowPosition,
@@ -188,7 +186,7 @@ enum Command_Line_Action{
     CLAct_FontSize,
     CLAct_FontUseHinting,
     CLAct_UserDirectory,
-    //
+    CLAct_SkipArgument,
     CLAct_COUNT,
 };
 
