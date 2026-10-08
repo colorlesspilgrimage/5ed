@@ -129,7 +129,13 @@ fi
 # 2. no-fixed-tmp-names
 # Scripts must not write to fixed names in /tmp. Another local user can put
 # a symlink there first. Use mktemp.
-if grep -nE '/tmp/' "$ROOT/scripts/check-structure.sh" > "$work/tmp.txt"; then
+# This file is not examined. Its grep pattern holds the text that it finds.
+: > "$work/tmp.txt"
+for script in "$ROOT"/scripts/*.sh; do
+    [ "$(basename "$script")" = "check-security.sh" ] && continue
+    grep -nHE '/tmp/' "$script" >> "$work/tmp.txt" || true
+done
+if [ -s "$work/tmp.txt" ]; then
     fail_check "no-fixed-tmp-names"
     cat "$work/tmp.txt"
 else
