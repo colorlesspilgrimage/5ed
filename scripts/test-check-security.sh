@@ -24,11 +24,9 @@ fail_test() {
     fail=1
 }
 
-# The bad text is made in two parts.
-# Thus this file does not hold a fixed scratch name itself.
+# Split the path so this file has no fixed scratch name.
 fixed_name="/tm""p/5ed-fixed-name.txt"
 
-# 1. A clean tree passes the scratch-name check.
 "$ROOT/scripts/check-security.sh" "$ROOT" "$BUILD" > "$WORK/out.txt" 2>&1 || true
 if grep -q "^PASS: no-fixed-tmp-names" "$WORK/out.txt"; then
     pass "clean tree passes no-fixed-tmp-names"
@@ -37,8 +35,7 @@ else
     cat "$WORK/out.txt"
 fi
 
-# 2. Each script that writes scratch files must not use a fixed name.
-# A fixed name in any of these scripts must give a FAIL line.
+# A fixed scratch name in a script must give a FAIL line.
 for script in check-structure.sh check-commands.sh test-check-structure.sh test-check-security.sh; do
     copy=$WORK/copy
     rm -rf "$copy"

@@ -25,7 +25,6 @@ fail_test() {
     fail=1
 }
 
-# Make a new copy of src/ in $WORK/tree.
 new_tree() {
     rm -rf "$WORK/tree"
     mkdir "$WORK/tree"
@@ -45,7 +44,6 @@ expect_fail() {
     fi
 }
 
-# 1. The real tree passes.
 if "$CHECK" "$ROOT" > "$WORK/out.txt" 2>&1; then
     pass "clean tree passes"
 else
@@ -53,32 +51,29 @@ else
     cat "$WORK/out.txt"
 fi
 
-# 2. A list line is missing.
 new_tree
 grep -v '^COMMAND(undo,' "$ROOT/$LIST" > "$WORK/tree/$LIST"
 expect_fail "missing list line" "missing undo"
 
-# 3. The kind in the list is wrong.
 new_tree
 sed 's/^COMMAND(undo, false,/COMMAND(undo, true,/' "$ROOT/$LIST" > "$WORK/tree/$LIST"
 expect_fail "wrong kind" "kind undo"
 
-# 4. CUSTOM_DOC is back in a source file.
 new_tree
 printf '\nCUSTOM_DOC("x")\n' >> "$WORK/tree/src/custom/5ed_examples.cpp"
 expect_fail "CUSTOM_DOC in source" "CUSTOM_DOC"
 
-# 5. A new command with "{" on the signature line has no list line.
+# "{" on the signature line is still a definition.
 new_tree
 printf '\nCUSTOM_COMMAND_SIG(audit_brace_command){\n}\n' >> "$WORK/tree/src/custom/5ed_examples.cpp"
 expect_fail "brace on signature line" "missing audit_brace_command"
 
-# 6. A new command with a comment after the signature has no list line.
+# A comment after the signature is still a definition.
 new_tree
 printf '\nCUSTOM_UI_COMMAND_SIG(audit_comment_command) // x\n{\n}\n' >> "$WORK/tree/src/custom/5ed_examples.cpp"
 expect_fail "comment after signature" "missing audit_comment_command"
 
-# 7. A name occurs twice in the list. Only the duplicate is reported.
+# Only the duplicate is reported.
 new_tree
 grep '^COMMAND(undo,' "$ROOT/$LIST" >> "$WORK/tree/$LIST"
 expect_fail "duplicate list line" "duplicate undo"
@@ -88,12 +83,10 @@ else
     pass "duplicate list line is not also extra"
 fi
 
-# 8. A description is empty.
 new_tree
 sed 's/^COMMAND(undo, false, ".*")$/COMMAND(undo, false, "")/' "$ROOT/$LIST" > "$WORK/tree/$LIST"
 expect_fail "empty description" "empty description undo"
 
-# 9. A forward declaration is not a definition.
 new_tree
 printf '\nCUSTOM_COMMAND_SIG(audit_declared_command);\n' >> "$WORK/tree/src/custom/5ed_examples.cpp"
 if "$CHECK" "$WORK/tree" > "$WORK/out.txt" 2>&1; then

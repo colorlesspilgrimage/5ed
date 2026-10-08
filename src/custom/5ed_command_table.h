@@ -1,7 +1,6 @@
 #if !defined(FCODER_COMMAND_TABLE_H)
 #define FCODER_COMMAND_TABLE_H
 
-// Forward declarations of every command.
 #define COMMAND(name, is_ui, description) CUSTOM_COMMAND_SIG(name);
 #include "custom/5ed_command_list.h"
 #undef COMMAND
