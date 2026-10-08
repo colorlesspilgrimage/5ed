@@ -1,5 +1,18 @@
 /*
 5ed_config.h - Configuration structs.
+
+Grammar for .5ed files.
+config.5ed, bindings.5ed, themes and project.5ed all use this grammar.
+Only project.5ed requires version(2);.
+Strings accept the escapes \\, \", \n, \t and \0.
+
+sconfig := [version] {assignment}
+version := "version" "(" INTEGER ")" ";"
+assignment := lvalue "=" rvalue ";"
+lvalue := IDENTIFIER [ "[" INTEGER "]" ]
+rvalue := lvalue | BOOLEAN | INTEGER | STRING | CHARACTER | "{" compound_body
+compound_body := compound_element {"," compound_element} [","] "}"
+compound_element := ["." (IDENTIFIER | INTEGER) "="] rvalue
 */
 
 // TOP
@@ -210,7 +223,6 @@ function Config_RValue*           def_config_parser_rvalue    (Config_Parser *ct
 function Config_Compound*         def_config_parser_compound  (Config_Parser *ctx);
 function Config_Compound_Element* def_config_parser_element   (Config_Parser *ctx);
 
-function Config* def_config_parse(Application_Links *app, Arena *arena, String_Const_u8 file_name, String_Const_u8 data, Token_Array array);
 function Config* def_config_from_text(Application_Links *app, Arena *arena, String_Const_u8 file_name, String_Const_u8 data);
 
 function Config_Error* def_config_push_error(Arena *arena, Config_Error_List *list, String_Const_u8 file_name, u8 *pos, char *error_text);

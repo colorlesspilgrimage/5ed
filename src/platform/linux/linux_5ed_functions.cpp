@@ -10,6 +10,26 @@
 
 global char *lnx_override_user_directory = 0;
 
+// Return "<dir>/5ed/".
+// Use the env value when it is set, not empty, and starts with /.
+// Otherwise use $HOME and the suffix.
+// Return an empty string when HOME is not set.
+function String_Const_u8
+lnx_xdg_dir(Arena *arena, const char *env_name, const char *home_suffix){
+    String_Const_u8 result = {};
+    char *env_value = getenv(env_name);
+    if (env_value != 0 && env_value[0] == '/'){
+        result = push_u8_stringf(arena, "%s/5ed/", env_value);
+    }
+    else{
+        char *home_cstr = getenv("HOME");
+        if (home_cstr != 0){
+            result = push_u8_stringf(arena, "%s/%s/5ed/", home_cstr, home_suffix);
+        }
+    }
+    return(result);
+}
+
 String_Const_u8
 system_get_path(Arena* arena, System_Path_Code path_code){
     String_Const_u8 result = {};
@@ -44,17 +64,19 @@ system_get_path(Arena* arena, System_Path_Code path_code){
             result = string_remove_last_folder(SCu8(buf, n));
         } break;
         
-        case SystemPath_UserDirectory:
+        case SystemPath_ConfigDirectory:
         {
-            if (lnx_override_user_directory == 0){
-                char *home_cstr = getenv("HOME");
-                if (home_cstr != 0){
-                    result = push_u8_stringf(arena, "%s/.5ed/", home_cstr);
-                }
-            }
-            else{
+            if (lnx_override_user_directory != 0){
                 result = SCu8((u8*)lnx_override_user_directory);
             }
+            else{
+                result = lnx_xdg_dir(arena, "XDG_CONFIG_HOME", ".config");
+            }
+        }break;
+        
+        case SystemPath_DataDirectory:
+        {
+            result = lnx_xdg_dir(arena, "XDG_DATA_HOME", ".local/share");
         }break;
     }
     

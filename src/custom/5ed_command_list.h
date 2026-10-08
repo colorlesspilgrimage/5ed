@@ -52,7 +52,7 @@ COMMAND(duplicate_line, false, "Create a copy of the line on which the cursor si
 COMMAND(execute_any_cli, false, "Queries for an output buffer name and system command, runs the system command as a CLI and prints the output to the specified buffer.")
 COMMAND(execute_previous_cli, false, "If the command execute_any_cli has already been used, this will execute a CLI reusing the most recent buffer name and command.")
 COMMAND(exit_5ed, false, "Attempts to close 5ed.")
-COMMAND(go_to_user_directory, false, "Go to the 5ed user directory")
+COMMAND(go_to_user_directory, false, "Go to the 5ed config directory")
 COMMAND(goto_beginning_of_file, false, "Sets the cursor to the beginning of the file.")
 COMMAND(goto_end_of_file, false, "Sets the cursor to the end of the file.")
 COMMAND(goto_first_jump, false, "If a buffer containing jump locations has been locked in, goes to the first jump in the buffer.")

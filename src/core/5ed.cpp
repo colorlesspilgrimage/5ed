@@ -49,6 +49,7 @@ init_command_line_settings(App_Settings *settings, Plat_Settings *plat_settings,
                                 
                                 case 'f': action = CLAct_FontSize; break;
                                 case 'h': action = CLAct_FontUseHinting; --i; break;
+                                // -U <dir> replaces the config directory only.
                                 case 'U': action = CLAct_UserDirectory; break;
                                 
                                 // The removed options -d and -D took a library path.

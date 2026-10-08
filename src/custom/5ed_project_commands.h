@@ -78,6 +78,9 @@ function Prj_Setup_Status prj_file_is_setup(Application_Links *app, String8 scri
 function b32 prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_path, String8 script_file, String8 code_file, String8 output_dir, String8 binary_file);
 function b32 prj_generate_project(Arena *scratch, String8 script_path, String8 script_file, String8 output_dir, String8 binary_file);
 
+function b32 prj_text_is_safe(String8 text);
+function String8 prj_shell_quote(Arena *arena, String8 text);
+function String8 prj_escape_string(Arena *arena, String8 text);
 function void prj_setup_scripts(Application_Links *app, Prj_Setup_Script_Flags flags);
 
 ////////////////////////////////

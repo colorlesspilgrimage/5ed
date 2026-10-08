@@ -57,6 +57,9 @@ harness="$work/prj_harness.cpp"
     echo '#include <stdio.h>'
     echo '#include <fcntl.h>'
     echo '#include <unistd.h>'
+    extract_function "$src" prj_text_is_safe
+    extract_function "$src" prj_shell_quote
+    extract_function "$src" prj_escape_string
     extract_function "$src" prj_create_new_file
     extract_function "$src" prj_generate_sh
     extract_function "$src" prj_generate_project
@@ -66,11 +69,24 @@ main(int argc, char **argv){
     Arena arena = make_arena_malloc();
     String_Const_u8 dir = SCu8(argv[1]);
     String_Const_u8 script = string_u8_litexpr("build");
+    String_Const_u8 compiler = {};
     String_Const_u8 code = string_u8_litexpr("main.cpp");
     String_Const_u8 od = string_u8_litexpr(".");
     String_Const_u8 bf = string_u8_litexpr("app");
+    if (argc > 2){
+        compiler = SCu8(argv[2]);
+    }
+    if (argc > 3){
+        code = SCu8(argv[3]);
+    }
+    if (argc > 4){
+        od = SCu8(argv[4]);
+    }
+    if (argc > 5){
+        bf = SCu8(argv[5]);
+    }
     String_Const_u8 empty = {};
-    b32 sh = prj_generate_sh(&arena, empty, empty, dir, script, code, od, bf);
+    b32 sh = prj_generate_sh(&arena, empty, compiler, dir, script, code, od, bf);
     b32 prj = prj_generate_project(&arena, dir, script, od, bf);
     printf("%d %d\n", (int)(sh != 0), (int)(prj != 0));
     return(0);
@@ -119,10 +135,45 @@ else
         setup_ok=0
     fi
 
+    # Hostile typed text must be one quoted argument. It must not run.
+    quote_ok=1
+    case_dir="$work/quoted"
+    mkdir -p "$case_dir/o d"
+    bin_name=$(printf '%s' "a'b\"c \$(touch pwned)")
+    "$work/prj_harness" "$case_dir" echo "m n.cpp" "o d" "$bin_name" > /dev/null
+    if ! bash -n "$case_dir/build.sh"; then
+        echo "FAIL: quoted build.sh is not valid shell"
+        quote_ok=0
+    fi
+    (cd "$case_dir" && bash build.sh) > "$work/quoted-out.txt"
+    want=$(printf '%s' "m n.cpp -o a'b\"c \$(touch pwned)")
+    if ! grep -F -q -- "$want" "$work/quoted-out.txt"; then
+        echo "FAIL: quoted build.sh did not keep the typed text as one argument"
+        quote_ok=0
+    fi
+    if [ -e "$case_dir/pwned" ]; then
+        echo "FAIL: quoted build.sh ran the typed command"
+        quote_ok=0
+    fi
+
+    case_dir="$work/control"
+    mkdir -p "$case_dir"
+    nl_name=$(printf 'a\nb')
+    result=$("$work/prj_harness" "$case_dir" echo main.cpp . "$nl_name")
+    if [ "$result" != "0 0" ] || [ -e "$case_dir/build.sh" ] || [ -e "$case_dir/project.5ed" ]; then
+        echo "FAIL: a control character was not refused (got '$result')"
+        quote_ok=0
+    fi
+
     if [ "$setup_ok" -eq 1 ]; then
         pass "setup-no-symlink-follow"
     else
         fail_check "setup-no-symlink-follow"
+    fi
+    if [ "$quote_ok" -eq 1 ]; then
+        pass "setup-quote-typed-text"
+    else
+        fail_check "setup-quote-typed-text"
     fi
 fi
 
@@ -143,8 +194,8 @@ else
 fi
 
 # 3. no-user-library-load
-# 5ed must not load a shared library from the user directory at start.
-# The user directory is $HOME/.5ed/. It can hold a file from an untrusted source.
+# 5ed must not load a shared library from $HOME/.5ed at start.
+# That path is not a config path. A file there can still be untrusted.
 # 5ed must not load a library that the -d or -D option names.
 # The test library writes a marker file when it is loaded.
 # 5ed stops at the X11 display step because DISPLAY is not set.

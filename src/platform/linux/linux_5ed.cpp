@@ -1769,6 +1769,7 @@ main(int argc, char **argv){
         base_ptr = app.read_command_line(&linuxvars.tctx, curdir, &plat_settings, &files, &file_count, argc, argv);
     }
     
+    // -U replaces the config directory only.
     if (plat_settings.user_directory != 0){
         lnx_override_user_directory = plat_settings.user_directory;
     }

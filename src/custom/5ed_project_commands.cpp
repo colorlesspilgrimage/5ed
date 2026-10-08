@@ -176,8 +176,8 @@ prj_stringize__string_list(Application_Links *app, Arena *arena, String8 name, V
     for (Vars_Children(child, list)){
         String8 child_string = vars_string_from_var(scratch, child);
         if (child_string.size > 0){
-            // TODO(allen): escape child_string
-            string_list_pushf(arena, out, "\"%.*s\",\n", string_expand(child_string));
+            String8 escaped = prj_escape_string(scratch, child_string);
+            string_list_pushf(arena, out, "\"%.*s\",\n", string_expand(escaped));
         }
     }
     string_list_pushf(arena, out, "};\n");
@@ -224,8 +224,8 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
     
     String8 project_name = vars_string_from_var(scratch, vars_read_key(project, project_name_id));
     if (project_name.size > 0){
-        // TODO(allen): escape project_name
-        string_list_pushf(arena, out, "project_name = \"%.*s\";\n", string_expand(project_name));
+        String8 escaped_name = prj_escape_string(scratch, project_name);
+        string_list_pushf(arena, out, "project_name = \"%.*s\";\n", string_expand(escaped_name));
     }
     
     string_list_push(arena, out, str8_lit("\n"));
@@ -259,13 +259,13 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
                     Variable_Handle recursive_var = vars_read_key(child, recursive_id);
                     Variable_Handle relative_var = vars_read_key(child, relative_id);
                     
-                    // TODO(allen): escape path_string
                     String8 path_string = vars_string_from_var(scratch, path_var);
+                    String8 escaped_path = prj_escape_string(scratch, path_string);
                     b32 recursive = vars_b32_from_var(recursive_var);
                     b32 relative = vars_b32_from_var(relative_var);
                     
                     string_list_push(arena, out, str8_lit("{ "));
-                    string_list_pushf(arena, out, ".path = \"%.*s\", ", string_expand(path_string));
+                    string_list_pushf(arena, out, ".path = \"%.*s\", ", string_expand(escaped_path));
                     string_list_pushf(arena, out, ".recursive = %s, ", (recursive?"true":"false"));
                     string_list_pushf(arena, out, ".relative = %s, ", (relative?"true":"false"));
                     string_list_push(arena, out, str8_lit("},\n"));
@@ -288,9 +288,9 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
             for (i32 i = 0; i < os_string_count; i += 1){
                 Variable_Handle os_cmd_var = vars_read_key(command, os_string_ids[i]);
                 if (!vars_is_nil(os_cmd_var)){
-                    // TODO(allen): escape os_cmd_string
                     String8 os_cmd_string = vars_string_from_var(scratch, os_cmd_var);
-                    string_list_pushf(arena, out, ".%.*s = \"%.*s\",\n", string_expand(os_strings[i]), string_expand(os_cmd_string));
+                    String8 escaped_cmd = prj_escape_string(scratch, os_cmd_string);
+                    string_list_pushf(arena, out, ".%.*s = \"%.*s\",\n", string_expand(os_strings[i]), string_expand(escaped_cmd));
                 }
             }
             
@@ -299,13 +299,13 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
             Variable_Handle save_dirty_files_var = vars_read_key(command, save_dirty_files_id);
             Variable_Handle cursor_at_end_var = vars_read_key(command, cursor_at_end_id);
             
-            // TODO(allen): escape out_string
             String8 out_string = vars_string_from_var(scratch, out_var);
+            String8 escaped_out = prj_escape_string(scratch, out_string);
             b32 footer_panel = vars_b32_from_var(footer_panel_var);
             b32 save_dirty_files = vars_b32_from_var(save_dirty_files_var);
             b32 cursor_at_end = vars_b32_from_var(cursor_at_end_var);
             
-            string_list_pushf(arena, out, ".out = \"%.*s\",\n", string_expand(out_string));
+            string_list_pushf(arena, out, ".out = \"%.*s\",\n", string_expand(escaped_out));
             string_list_pushf(arena, out, ".footer_panel = %s,\n", (footer_panel?"true":"false"));
             string_list_pushf(arena, out, ".save_dirty_files = %s,\n", (save_dirty_files?"true":"false"));
             string_list_pushf(arena, out, ".cursor_at_end = %s,\n", (cursor_at_end?"true":"false"));
@@ -322,8 +322,9 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
         for (Vars_Children(child, fkey_commands)){
             String8 key = vars_key_from_var(scratch, child);
             String8 name = vars_string_from_var(scratch, child);
+            String8 escaped_fkey = prj_escape_string(scratch, name);
             string_list_pushf(arena, out, ".%.*s = \"%.*s\",\n",
-                              string_expand(key), string_expand(name));
+                              string_expand(key), string_expand(escaped_fkey));
         }
         string_list_push(arena, out, str8_lit("};\n\n"));
     }
@@ -339,8 +340,9 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
             for (Vars_Children(child, user_child)){
                 String8 key = vars_key_from_var(scratch, child);
                 String8 name = vars_string_from_var(scratch, child);
+                String8 escaped_override = prj_escape_string(scratch, name);
                 string_list_pushf(arena, out, ".%.*s = \"%.*s\",\n",
-                                  string_expand(key), string_expand(name));
+                                  string_expand(key), string_expand(escaped_override));
             }
             string_list_pushf(arena, out, "},\n");
         }
@@ -371,6 +373,76 @@ prj_file_is_setup(Application_Links *app, String8 script_path, String8 script_fi
 #include <fcntl.h>
 #include <unistd.h>
 
+
+function b32
+prj_text_is_safe(String8 text){
+    b32 result = true;
+    for (u64 i = 0; i < text.size; i += 1){
+        u8 c = text.str[i];
+        if (c < 0x20 || c == 0x7F){
+            result = false;
+            break;
+        }
+    }
+    return(result);
+}
+
+function String8
+prj_shell_quote(Arena *arena, String8 text){
+    u64 extra = 0;
+    for (u64 i = 0; i < text.size; i += 1){
+        if (text.str[i] == '\''){
+            extra += 3;
+        }
+    }
+    u64 size = text.size + extra + 2;
+    u8 *out = push_array(arena, u8, size + 1);
+    u64 j = 0;
+    out[j] = '\'';
+    j += 1;
+    for (u64 i = 0; i < text.size; i += 1){
+        if (text.str[i] == '\''){
+            out[j] = '\'';
+            out[j + 1] = '\\';
+            out[j + 2] = '\'';
+            out[j + 3] = '\'';
+            j += 4;
+        }
+        else{
+            out[j] = text.str[i];
+            j += 1;
+        }
+    }
+    out[j] = '\'';
+    j += 1;
+    out[j] = 0;
+    return(SCu8(out, j));
+}
+
+function String8
+prj_escape_string(Arena *arena, String8 text){
+    u64 extra = 0;
+    for (u64 i = 0; i < text.size; i += 1){
+        u8 c = text.str[i];
+        if (c == '\\' || c == '"'){
+            extra += 1;
+        }
+    }
+    u8 *out = push_array(arena, u8, text.size + extra + 1);
+    u64 j = 0;
+    for (u64 i = 0; i < text.size; i += 1){
+        u8 c = text.str[i];
+        if (c == '\\' || c == '"'){
+            out[j] = '\\';
+            j += 1;
+        }
+        out[j] = c;
+        j += 1;
+    }
+    out[j] = 0;
+    return(SCu8(out, j));
+}
+
 // Create a new file for writing. Do not open a file that exists.
 // Do not follow a symlink, also if its target does not exist.
 // The hot directory can be an untrusted checkout. A symlink there must
@@ -391,49 +463,65 @@ prj_create_new_file(char *file_name){
 function b32
 prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_path, String8 script_file, String8 code_file, String8 output_dir, String8 binary_file){
     b32 success = false;
+    if (!prj_text_is_safe(script_file) ||
+        !prj_text_is_safe(code_file) ||
+        !prj_text_is_safe(output_dir) ||
+        !prj_text_is_safe(binary_file) ||
+        string_find_first(script_file, '/') < script_file.size){
+        return(success);
+    }
     
     Temp_Memory temp = begin_temp(scratch);
-    
-    String8 cf = code_file;
-    String8 od = output_dir;
-    String8 bf = binary_file;
-    
     String8 file_name = push_u8_stringf(scratch, "%.*s/%.*s.sh",
                                         string_expand(script_path),
                                         string_expand(script_file));
+    String8 od_q = prj_shell_quote(scratch, output_dir);
+    String8 cf_q = prj_shell_quote(scratch, code_file);
+    String8 bf_q = prj_shell_quote(scratch, binary_file);
     
     FILE *sh_script = prj_create_new_file((char*)file_name.str);
     if (sh_script != 0){
         fprintf(sh_script, "#!/bin/bash\n\n");
         fprintf(sh_script, "code=\"$PWD\"\n");
         fprintf(sh_script, "opts=%.*s\n", string_expand(opts));
-        fprintf(sh_script, "cd %.*s > /dev/null\n", string_expand(od));
-        fprintf(sh_script, "%.*s $opts $code/%.*s -o %.*s\n", string_expand(compiler), string_expand(cf), string_expand(bf));
-        fprintf(sh_script, "cd $code > /dev/null\n");
+        fprintf(sh_script, "cd %.*s > /dev/null\n", string_expand(od_q));
+        fprintf(sh_script, "%.*s $opts \"$code\"/%.*s -o %.*s\n",
+                string_expand(compiler), string_expand(cf_q), string_expand(bf_q));
+        fprintf(sh_script, "cd \"$code\" > /dev/null\n");
         fclose(sh_script);
         success = true;
     }
     
     end_temp(temp);
-    
     return(success);
 }
 
 function b32
 prj_generate_project(Arena *scratch, String8 script_path, String8 script_file, String8 output_dir, String8 binary_file){
     b32 success = false;
+    if (!prj_text_is_safe(script_file) ||
+        !prj_text_is_safe(output_dir) ||
+        !prj_text_is_safe(binary_file) ||
+        string_find_first(script_file, '/') < script_file.size){
+        return(success);
+    }
     
     Temp_Memory temp = begin_temp(scratch);
-    
-    String8 od = output_dir;
-    String8 bf = binary_file;
-
     String8 file_name = push_u8_stringf(scratch, "%.*s/project.5ed", string_expand(script_path));
+    String8 name_esc = prj_escape_string(scratch, binary_file);
+    String8 sh_name = push_u8_stringf(scratch, "%.*s.sh", string_expand(script_file));
+    String8 sh_q = prj_shell_quote(scratch, sh_name);
+    String8 build_raw = push_u8_stringf(scratch, "./%.*s", string_expand(sh_q));
+    String8 build_esc = prj_escape_string(scratch, build_raw);
+    String8 run_raw = push_u8_stringf(scratch, "%.*s/%.*s",
+                                      string_expand(output_dir), string_expand(binary_file));
+    String8 run_q = prj_shell_quote(scratch, run_raw);
+    String8 run_esc = prj_escape_string(scratch, run_q);
     
     FILE *out = prj_create_new_file((char*)file_name.str);
     if (out != 0){
         fprintf(out, "version(2);\n");
-        fprintf(out, "project_name = \"%.*s\";\n", string_expand(binary_file));
+        fprintf(out, "project_name = \"%.*s\";\n", string_expand(name_esc));
         fprintf(out, "patterns = {\n");
         fprintf(out, "\"*.c\",\n");
         fprintf(out, "\"*.cpp\",\n");
@@ -451,27 +539,22 @@ prj_generate_project(Arena *scratch, String8 script_path, String8 script_file, S
         fprintf(out, "load_paths = {\n");
         fprintf(out, " .linux = load_paths_base,\n");
         fprintf(out, "};\n");
-        
         fprintf(out, "\n");
-        
         fprintf(out, "commands = {\n");
         fprintf(out, " .build = { .out = \"*compilation*\", .footer_panel = true, .save_dirty_files = true,\n");
-        fprintf(out, "   .linux = \"./%.*s.sh\", },\n", string_expand(script_file));
+        fprintf(out, "   .linux = \"%.*s\", },\n", string_expand(build_esc));
         fprintf(out, " .run = { .out = \"*run*\", .footer_panel = false, .save_dirty_files = false,\n");
-        fprintf(out, "   .linux = \"%.*s/%.*s\", },\n", string_expand(od), string_expand(bf));
+        fprintf(out, "   .linux = \"%.*s\", },\n", string_expand(run_esc));
         fprintf(out, "};\n");
-        
         fprintf(out, "fkey_command = {\n");
         fprintf(out, ".F1 = \"run\",\n");
         fprintf(out, ".F2 = \"run\",\n");
         fprintf(out, "};\n");
-        
         fclose(out);
         success = true;
     }
     
     end_temp(temp);
-    
     return(success);
 }
 
@@ -569,6 +652,15 @@ prj_setup_scripts(Application_Links *app, Prj_Setup_Script_Flags flags){
             return;
         }
         
+        if (!prj_text_is_safe(script_file) ||
+            !prj_text_is_safe(code_file) ||
+            !prj_text_is_safe(output_dir) ||
+            !prj_text_is_safe(binary_file) ||
+            string_find_first(script_file, '/') < script_file.size){
+            print_message(app, string_u8_litexpr("setup: the text has a control character or a slash; no file written\n"));
+            return;
+        }
+        
         if (do_project_file){
             script_file = string_u8_litexpr("build");
         }
@@ -577,36 +669,35 @@ prj_setup_scripts(Application_Links *app, Prj_Setup_Script_Flags flags){
             status = prj_file_is_setup(app, script_path, script_file);
         }
         
-        // Generate Scripts
-        
         if (do_sh_script){
             if (!status.sh_exists){
                 String8 default_flags_sh = def_get_config_string(scratch, vars_save_string_lit("default_flags_sh"));
                 String8 default_compiler_sh = def_get_config_string(scratch, vars_save_string_lit("default_compiler_sh"));
                 if (!prj_generate_sh(scratch, default_flags_sh, default_compiler_sh,
                                      script_path, script_file, code_file, output_dir, binary_file)){
-                    print_message(app, string_u8_litexpr("could not create build.sh for new project\n"));
+                    print_message(app, push_u8_stringf(scratch, "could not create %.*s.sh; delete it and run the command again to make a new one\n", string_expand(script_file)));
                 }
             }
             else{
-                print_message(app, string_u8_litexpr("the shell script already exists, no changes made to it\n"));
+                print_message(app, push_u8_stringf(scratch, "%.*s.sh already exists; delete it and run the command again to make a new one\n", string_expand(script_file)));
             }
         }
         
         if (do_project_file){
             if (!status.project_exists){
                 if (!prj_generate_project(scratch, script_path, script_file, output_dir, binary_file)){
-                    print_message(app, string_u8_litexpr("could not create project.5ed for new project\n"));
+                    print_message(app, string_u8_litexpr("could not create project.5ed; delete it and run the command again to make a new one\n"));
                 }
             }
             else{
-                print_message(app, string_u8_litexpr("project.5ed already exists, no changes made to it\n"));
+                print_message(app, string_u8_litexpr("project.5ed already exists; delete it and run the command again to make a new one\n"));
             }
         }
     }
     else{
         if (do_project_file){
-            print_message(app, string_u8_litexpr("project already setup, no changes made\n"));
+            print_message(app, string_u8_litexpr("build.sh already exists; delete it and run the command again to make a new one\n"));
+            print_message(app, string_u8_litexpr("project.5ed already exists; delete it and run the command again to make a new one\n"));
         }
     }
 }
@@ -809,7 +900,6 @@ CUSTOM_COMMAND_SIG(load_project)
     // NOTE(allen): Load the project file from the hot directory
     String8 project_path = push_hot_directory(app, scratch);
     File_Name_Data dump = dump_file_search_up_path(app, scratch, project_path, string_u8_litexpr("project.5ed"));
-    String8 project_root = string_remove_last_folder(dump.file_name);
     
     if (dump.data.str == 0){
         print_message(app, string_u8_litexpr("Did not find project.5ed.\n"));
@@ -819,27 +909,14 @@ CUSTOM_COMMAND_SIG(load_project)
     Config *config_parse = 0;
     Variable_Handle prj_var = vars_get_nil();
     if (dump.data.str != 0){
-        Token_Array array = token_array_from_text(app, scratch, dump.data);
-        if (array.tokens != 0){
-            config_parse = def_config_parse(app, scratch, dump.file_name, dump.data, array);
-            if (config_parse != 0){
-                i32 version = 0;
-                if (config_parse->version != 0){
-                    version = *config_parse->version;
-                }
-                
-                switch (version){
-                    case 0:
-                    case 1:
-                    {
-                        prj_var = prj_v1_to_v2(app, project_root, config_parse);
-                    }break;
-                    default:
-                    {
-                        prj_var = def_fill_var_from_config(app, vars_get_root(), vars_save_string_lit("prj_config"), config_parse);
-                    }break;
-                }
-                
+        config_parse = def_config_from_text(app, scratch, dump.file_name, dump.data);
+        if (config_parse != 0){
+            if (config_parse->version == 0 || *config_parse->version != 2){
+                String8 msg = push_u8_stringf(scratch, "Project errors:\n%.*s: project.5ed needs version(2); no project loaded.\n", string_expand(dump.file_name));
+                print_message(app, msg);
+            }
+            else{
+                prj_var = def_fill_var_from_config(app, vars_get_root(), vars_save_string_lit("prj_config"), config_parse);
             }
         }
     }
