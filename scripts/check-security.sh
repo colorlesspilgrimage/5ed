@@ -34,8 +34,8 @@ for need in lib5ed_base.a 5ed; do
     fi
 done
 
-# Copy one function from a source file. The function starts at the line
-# "function <type>" before "<name>(". It stops at the first line "}".
+# Copy one function. Start at the "function" line before "<name>(".
+# Stop at the first line "}".
 extract_function() {
     awk -v name="$2" '
         prev ~ /^function / && index($0, name "(") == 1 { copy = 1; print prev }
@@ -46,10 +46,9 @@ extract_function() {
 }
 
 # 1. setup-no-symlink-follow
-# prj_generate_sh and prj_generate_project write build.sh and project.5ed
-# in the hot directory. The hot directory can be an untrusted checkout.
-# A symlink with these names must not make 5ed write a file elsewhere.
-# A file that exists must not be changed.
+# The hot directory can be an untrusted checkout.
+# A symlink must not write a file in another place.
+# A file that exists must stay the same.
 src="$ROOT/src/custom/5ed_project_commands.cpp"
 harness="$work/prj_harness.cpp"
 {
@@ -58,6 +57,7 @@ harness="$work/prj_harness.cpp"
     echo '#include <fcntl.h>'
     echo '#include <unistd.h>'
     extract_function "$src" prj_text_is_safe
+    extract_function "$src" prj_typed_fields_are_safe
     extract_function "$src" prj_shell_quote
     extract_function "$src" prj_escape_code
     extract_function "$src" prj_escape_string
@@ -114,7 +114,6 @@ else
         fi
     done
 
-    # Regular files that exist: keep their content.
     case_dir="$work/existing"
     mkdir -p "$case_dir"
     echo keep > "$case_dir/build.sh"
@@ -127,7 +126,6 @@ else
         fi
     done
 
-    # Empty directory: setup must still create the two files.
     case_dir="$work/fresh"
     mkdir -p "$case_dir"
     result=$("$work/prj_harness" "$case_dir")
@@ -178,8 +176,7 @@ else
         quote_ok=0
     fi
 
-    # An output dir that starts with "-" must not be an option of cd.
-    # "cd -L" goes to $HOME. Then the binary goes to the wrong folder.
+    # "cd -L" goes to $HOME. The binary would go to the wrong folder.
     case_dir="$work/dash"
     mkdir -p "$case_dir/-L" "$case_dir/home"
     "$work/prj_harness" "$case_dir" "pwd;:" main.cpp -L app > /dev/null
@@ -202,9 +199,8 @@ else
 fi
 
 # 2. no-fixed-tmp-names
-# Scripts must not write to fixed names in /tmp. Another local user can put
-# a symlink there first. Use mktemp.
-# Skip this file. Its pattern holds the text that it finds.
+# A fixed name in /tmp can be a symlink from another user.
+# Skip this file. Its text holds the pattern that this check finds.
 : > "$work/tmp.txt"
 for script in "$ROOT"/scripts/*.sh; do
     [ "$(basename "$script")" = "check-security.sh" ] && continue
@@ -218,12 +214,10 @@ else
 fi
 
 # 3. no-user-library-load
-# 5ed must not load a shared library from $HOME/.5ed at start.
-# That path is not a config path. A file there can still be untrusted.
-# 5ed must not load a library that the -d or -D option names.
-# The test library writes a marker file when it is loaded.
-# 5ed stops at the X11 display step because DISPLAY is not set.
-# The X11 message shows that 5ed got past the old library load step.
+# 5ed must not load a library from $HOME/.5ed or from -d or -D.
+# That folder is not a config path. A file there can be untrusted.
+# DISPLAY is not set, so 5ed stops at the X11 step.
+# The X11 message shows that 5ed passed the library load.
 lib_src="$work/evil.cpp"
 cat > "$lib_src" <<'EOF'
 #include <fcntl.h>
