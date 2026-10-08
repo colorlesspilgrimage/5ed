@@ -5,10 +5,9 @@
 // TOP
 
 // Usage: project_file_test <empty-dir> [file.5ed ...]
-// The test writes project.5ed and build.sh into <empty-dir> with the
-// setup_new_project generators. Then it parses project.5ed and each other
-// file with the real config parser. Each parse error makes the test fail.
-// The test calls no host API, so it does not need the editor.
+// The test writes project files, then parses them.
+// A parse error fails the test.
+// The test calls no host API.
 
 #include "custom/5ed_default_include.cpp"
 
@@ -16,35 +15,290 @@
 void
 custom_layer_init(Application_Links *app){}
 
-function b32
-test_parse_file(Arena *arena, String8 file_name){
-    b32 result = false;
+#include <sys/stat.h>
+
+function Config*
+test_parse_data(Arena *arena, String8 file_name, String8 data){
+    Token_List list = lex_full_input_cpp(arena, data);
+    Token_Array array = token_array_from_list(arena, &list);
+    Config_Parser ctx = def_config_parser_init(arena, file_name, data, array);
+    return(def_config_parser_top(&ctx));
+}
+
+function Config*
+test_open_config(Arena *arena, String8 file_name){
     FILE *file = fopen((char*)file_name.str, "rb");
     if (file == 0){
         printf("FAIL: cannot open %.*s\n", string_expand(file_name));
+        return(0);
+    }
+    String8 data = data_from_file(arena, file);
+    fclose(file);
+    Config *config = test_parse_data(arena, file_name, data);
+    if (config == 0){
+        printf("FAIL: no parse result for %.*s\n", string_expand(file_name));
+    }
+    return(config);
+}
+
+function b32
+test_parse_file(Arena *arena, String8 file_name){
+    b32 result = false;
+    Config *config = test_open_config(arena, file_name);
+    if (config == 0){
+        result = false;
+    }
+    else if (config->errors.count > 0){
+        printf("FAIL: %d parse errors in %.*s\n", config->errors.count, string_expand(file_name));
+        for (Config_Error *error = config->errors.first; error != 0; error = error->next){
+            printf("  %.*s\n", string_expand(error->text));
+        }
     }
     else{
-        String8 data = data_from_file(arena, file);
-        fclose(file);
-        Token_List list = lex_full_input_cpp(arena, data);
-        Token_Array array = token_array_from_list(arena, &list);
-        Config_Parser ctx = def_config_parser_init(arena, file_name, data, array);
-        Config *config = def_config_parser_top(&ctx);
-        if (config == 0){
-            printf("FAIL: no parse result for %.*s\n", string_expand(file_name));
-        }
-        else if (config->errors.count > 0){
-            printf("FAIL: %d parse errors in %.*s\n", config->errors.count, string_expand(file_name));
-            for (Config_Error *error = config->errors.first; error != 0; error = error->next){
-                printf("  %.*s\n", string_expand(error->text));
-            }
-        }
-        else{
-            printf("PASS: parse %.*s\n", string_expand(file_name));
-            result = true;
-        }
+        printf("PASS: parse %.*s\n", string_expand(file_name));
+        result = true;
     }
     return(result);
+}
+
+function b32
+test_make_dir(String8 path){
+    if (mkdir((char*)path.str, 0755) != 0){
+        printf("FAIL: cannot make %.*s\n", string_expand(path));
+        return(false);
+    }
+    return(true);
+}
+
+function b32
+test_hostile_project(Arena *arena, String8 dir){
+    b32 ok = true;
+    String8 hostile = push_u8_stringf(arena, "%.*s/hostile", string_expand(dir));
+    if (!test_make_dir(hostile)){
+        return(false);
+    }
+    String8 name = string_u8_litexpr("a\"b\\c $(x)");
+    String8 od = string_u8_litexpr("out dir");
+    String8 script = string_u8_litexpr("build");
+    if (!prj_generate_project(arena, hostile, script, od, name)){
+        printf("FAIL: hostile project was not written\n");
+        return(false);
+    }
+    String8 project = push_u8_stringf(arena, "%.*s/project.5ed", string_expand(hostile));
+    Config *config = test_open_config(arena, project);
+    if (config == 0 || config->errors.count > 0){
+        printf("FAIL: hostile project parse\n");
+        ok = false;
+    }
+    else{
+        String8 got_name = {};
+        String8 expect_run = string_u8_litexpr("'out dir/a\"b\\c $(x)'");
+        String8 got_run = {};
+        Config_Compound *commands = 0;
+        if (!config_string_var(config, "project_name", 0, &got_name) ||
+            !string_match(got_name, name)){
+            printf("FAIL: project_name round trip\n");
+            ok = false;
+        }
+        if (!config_compound_var(config, "commands", 0, &commands)){
+            printf("FAIL: no commands compound\n");
+            ok = false;
+        }
+        else{
+            Config_Get_Result run_get = config_compound_member(config, commands, string_u8_litexpr("run"), 0);
+            Config_Compound *run = 0;
+            if (run_get.success && run_get.type == ConfigRValueType_Compound){
+                run = run_get.compound;
+            }
+            if (run == 0 ||
+                !config_compound_string_member(config, run, "linux", 0, &got_run) ||
+                !string_match(got_run, expect_run)){
+                printf("FAIL: commands.run.linux round trip\n");
+                ok = false;
+            }
+        }
+        if (ok){
+            printf("PASS: hostile project round trip\n");
+        }
+    }
+    
+    String8 bad_nl = push_u8_stringf(arena, "%.*s/badnl", string_expand(dir));
+    if (!test_make_dir(bad_nl)){
+        ok = false;
+    }
+    else if (prj_generate_project(arena, bad_nl, script, od, string_u8_litexpr("a\nb"))){
+        printf("FAIL: newline name was accepted\n");
+        ok = false;
+    }
+    else{
+        String8 bad_file = push_u8_stringf(arena, "%.*s/project.5ed", string_expand(bad_nl));
+        FILE *bad = fopen((char*)bad_file.str, "rb");
+        if (bad != 0){
+            fclose(bad);
+            printf("FAIL: newline name wrote a file\n");
+            ok = false;
+        }
+        else{
+            printf("PASS: control character refused\n");
+        }
+    }
+    
+    String8 bad_slash = push_u8_stringf(arena, "%.*s/badslash", string_expand(dir));
+    if (!test_make_dir(bad_slash)){
+        ok = false;
+    }
+    else if (prj_generate_project(arena, bad_slash, string_u8_litexpr("../x"), od, name)){
+        printf("FAIL: slash script name was accepted\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: slash script name refused\n");
+    }
+    
+    String8 ver_path = push_u8_stringf(arena, "%.*s/version1.5ed", string_expand(dir));
+    FILE *vf = fopen((char*)ver_path.str, "wb");
+    if (vf == 0){
+        printf("FAIL: cannot write version file\n");
+        ok = false;
+    }
+    else{
+        fputs("version(1);\nproject_name = \"x\";\n", vf);
+        fclose(vf);
+        Config *ver = test_open_config(arena, ver_path);
+        if (ver == 0 || ver->version == 0 || *ver->version != 1){
+            printf("FAIL: version(1) parse\n");
+            ok = false;
+        }
+        else{
+            printf("PASS: version(1) parses\n");
+        }
+    }
+    return(ok);
+}
+
+function Config*
+test_parse_text(Arena *arena, String8 data){
+    return(test_parse_data(arena, str8_lit("limits"), data));
+}
+
+function String8
+test_nested_assign(u8 *dst, i32 depth, b32 put_one){
+    u64 n = 0;
+    block_copy(dst, "x = ", 4);
+    n = 4;
+    for (i32 i = 0; i < depth; i += 1){
+        dst[n] = '{';
+        n += 1;
+    }
+    if (put_one){
+        dst[n] = '1';
+        n += 1;
+    }
+    for (i32 i = 0; i < depth; i += 1){
+        dst[n] = '}';
+        n += 1;
+    }
+    dst[n] = ';';
+    n += 1;
+    return(SCu8(dst, n));
+}
+
+// A hostile project.5ed must not use all the stack or memory.
+function b32
+test_config_limits(Arena *arena){
+    b32 ok = true;
+    
+    // Deep compound nesting is a parse error, not a stack overflow.
+    i32 depth = 200000;
+    u8 *deep = push_array(arena, u8, depth*2 + 16);
+    Config *config = test_parse_text(arena, test_nested_assign(deep, depth, false));
+    if (config == 0 || config->errors.count == 0){
+        printf("FAIL: deep nesting gave no parse error\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: deep nesting is a parse error\n");
+    }
+    
+    config = test_parse_text(arena, test_nested_assign(deep, config_parser_max_depth, true));
+    if (config == 0 || config->errors.count != 0){
+        printf("FAIL: nesting at the limit gave a parse error\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: nesting at the limit parses\n");
+    }
+    
+    // A compound that refers to itself must not recurse without end.
+    char *cycles[] = {
+        "version(2);\na = { a };\n",
+        "version(2);\na = { b, b };\nb = { a, a };\n",
+    };
+    for (i32 i = 0; i < ArrayCount(cycles); i += 1){
+        config = test_parse_text(arena, SCu8(cycles[i]));
+        b32 complete = true;
+        if (config == 0 || config->errors.count != 0){
+            printf("FAIL: cycle %d parse\n", i);
+            ok = false;
+            continue;
+        }
+        def_fill_var_from_config(arena, vars_get_root(), vars_save_string_lit("limits_test"), config, &complete);
+        if (complete){
+            printf("FAIL: cycle %d dump was not stopped\n", i);
+            ok = false;
+        }
+        else{
+            printf("PASS: cycle %d dump is stopped\n", i);
+        }
+    }
+    
+    config = test_parse_text(arena, str8_lit("version(2);\nb = 1;\na = { b, { .c = \"x\" } };\n"));
+    b32 complete = false;
+    if (config != 0){
+        def_fill_var_from_config(arena, vars_get_root(), vars_save_string_lit("limits_test"), config, &complete);
+    }
+    if (!complete){
+        printf("FAIL: normal dump was stopped\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: normal dump is complete\n");
+    }
+    return(ok);
+}
+
+// A loaded value can hold a newline, a tab or NUL.
+// The escaped text must parse back to the same bytes.
+function b32
+test_escape_round_trip(Arena *arena, String8 dir){
+    b32 ok = true;
+    u8 raw_bytes[] = {'a', '\n', 'b', '\t', 'c', 0, 'd', '\\', 'e', '"', 'f'};
+    String8 raw = SCu8(raw_bytes, sizeof(raw_bytes));
+    String8 escaped = prj_escape_string(arena, raw);
+    String8 path = push_u8_stringf(arena, "%.*s/escape.5ed", string_expand(dir));
+    FILE *file = fopen((char*)path.str, "wb");
+    if (file == 0){
+        printf("FAIL: cannot write %.*s\n", string_expand(path));
+        return(false);
+    }
+    fprintf(file, "version(2);\nx = \"%.*s\";\ny = \"z\";\n", string_expand(escaped));
+    fclose(file);
+    Config *config = test_open_config(arena, path);
+    String8 got_x = {};
+    String8 got_y = {};
+    if (config == 0 || config->errors.count > 0){
+        printf("FAIL: escaped string does not parse\n");
+        ok = false;
+    }
+    else if (!config_string_var(config, "x", 0, &got_x) || !string_match(got_x, raw) ||
+             !config_string_var(config, "y", 0, &got_y) || !string_match(got_y, str8_lit("z"))){
+        printf("FAIL: escaped string round trip\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: escaped string round trip\n");
+    }
+    return(ok);
 }
 
 function b32
@@ -135,6 +389,9 @@ main(int argc, char **argv){
     
     String8 project = push_u8_stringf(&arena, "%.*s/project.5ed", string_expand(dir));
     ok = test_parse_file(&arena, project) && ok;
+    ok = test_hostile_project(&arena, dir) && ok;
+    ok = test_config_limits(&arena) && ok;
+    ok = test_escape_round_trip(&arena, dir) && ok;
     for (int i = 2; i < argc; i += 1){
         ok = test_parse_file(&arena, SCu8(argv[i])) && ok;
     }

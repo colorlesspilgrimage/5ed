@@ -14,7 +14,8 @@ def_search_normal_load_list(Arena *arena, String8List *list){
     if (prj_dir.size > 0){
         string_list_push(arena, list, prj_dir);
     }
-    def_search_list_add_system_path(arena, list, SystemPath_UserDirectory);
+    def_search_list_add_system_path(arena, list, SystemPath_ConfigDirectory);
+    def_search_list_add_system_path(arena, list, SystemPath_DataDirectory);
     def_search_list_add_system_path(arena, list, SystemPath_Binary);
 }
 
@@ -399,8 +400,14 @@ def_config_parser_rvalue(Config_Parser *ctx){
         rvalue->lvalue = l;
     }
     else if (def_config_parser_recognize_cpp_kind(ctx, TokenCppKind_BraceOp)){
+        if (ctx->depth >= config_parser_max_depth){
+            def_config_parser_push_error_here(ctx, "compound nesting is too deep");
+            return(0);
+        }
         def_config_parser_inc(ctx);
+        ctx->depth += 1;
         Config_Compound *compound = def_config_parser_compound(ctx);
+        ctx->depth -= 1;
         require(compound != 0);
         rvalue = push_array_zero(ctx->arena, Config_RValue, 1);
         rvalue->type = ConfigRValueType_Compound;
@@ -516,24 +523,14 @@ def_config_parser_element(Config_Parser *ctx){
 }
 
 function Config*
-def_config_parse(Application_Links *app, Arena *arena, String_Const_u8 file_name, String_Const_u8 data, Token_Array array){
-    ProfileScope(app, "config parse");
-    Temp_Memory restore_point = begin_temp(arena);
-    Config_Parser ctx = def_config_parser_init(arena, file_name, data, array);
-    Config *config = def_config_parser_top(&ctx);
-    if (config == 0){
-        end_temp(restore_point);
-    }
-    return(config);
-}
-
-function Config*
 def_config_from_text(Application_Links *app, Arena *arena, String_Const_u8 file_name, String_Const_u8 data){
     Config *parsed = 0;
     Temp_Memory restore_point = begin_temp(arena);
     Token_Array array = token_array_from_text(app, arena, data);
     if (array.tokens != 0){
-        parsed = def_config_parse(app, arena, file_name, data, array);
+        ProfileScope(app, "config parse");
+        Config_Parser ctx = def_config_parser_init(arena, file_name, data, array);
+        parsed = def_config_parser_top(&ctx);
         if (parsed == 0){
             end_temp(restore_point);
         }
@@ -587,9 +584,15 @@ def_config_parser_recover(Config_Parser *ctx){
 function Config_Get_Result
 config_var(Config *config, String_Const_u8 var_name, i32 subscript);
 
-function void
-def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst, String_ID l_value, Config_RValue *r){
-    Scratch_Block scratch(app);
+// A compound can name itself. Stop at the depth and count limits.
+function b32
+def_var_dump_rvalue(Arena *scratch, Config *config, Variable_Handle dst, String_ID l_value, Config_RValue *r, i32 depth, i32 *count){
+    if (depth > config_parser_max_depth || *count >= config_dump_max_count){
+        return(false);
+    }
+    *count += 1;
+    Temp_Memory_Block temp(scratch);
+    b32 result = true;
     
     b32 *boolean = 0;
     i32 *integer = 0;
@@ -708,16 +711,22 @@ def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst,
             if (sub_l_value != 0){
                 Config_RValue *r = node->r;
                 if (r != 0){
-                    def_var_dump_rvalue(app, config, sub_var, sub_l_value, r);
+                    if (!def_var_dump_rvalue(scratch, config, sub_var, sub_l_value, r, depth + 1, count)){
+                        result = false;
+                        break;
+                    }
                 }
             }
         }
     }
+    return(result);
 }
 
+// Set *complete to false when a dump limit stops the write.
 function Variable_Handle
-def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_ID key, Config *config){
+def_fill_var_from_config(Arena *scratch, Variable_Handle parent, String_ID key, Config *config, b32 *complete){
     Variable_Handle result = vars_get_nil();
+    *complete = true;
     
     if (key != 0){
         String_ID file_name_id = vars_save_string(config->file_name);
@@ -725,7 +734,8 @@ def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_
         
         Variable_Handle var = result;
         
-        Scratch_Block scratch(app);
+        Temp_Memory_Block temp(scratch);
+        i32 count = 0;
         
         if (config->version != 0){
             String_ID version_key = vars_save_string(string_u8_litexpr("version"));
@@ -749,12 +759,27 @@ def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_
             if (l_value != 0){
                 Config_RValue *r = node->r;
                 if (r != 0){
-                    def_var_dump_rvalue(app, config, var, l_value, r);
+                    if (!def_var_dump_rvalue(scratch, config, var, l_value, r, 0, &count)){
+                        *complete = false;
+                        break;
+                    }
                 }
             }
         }
     }
     
+    return(result);
+}
+
+function Variable_Handle
+def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_ID key, Config *config){
+    Scratch_Block scratch(app);
+    b32 complete = true;
+    Variable_Handle result = def_fill_var_from_config(scratch, parent, key, config, &complete);
+    if (!complete){
+        String8 msg = push_u8_stringf(scratch, "%.*s: the values are too deep or too many; the rest is not loaded\n", string_expand(config->file_name));
+        print_message(app, msg);
+    }
     return(result);
 }
 
@@ -961,65 +986,7 @@ config_compound_member(Config *config, Config_Compound *compound, String_Const_u
     return(result);
 }
 
-function Config_Iteration_Step_Result
-typed_array_iteration_step(Config *parsed, Config_Compound *compound, Config_RValue_Type type, i32 index);
 
-function i32
-typed_array_get_count(Config *parsed, Config_Compound *compound, Config_RValue_Type type);
-
-function Config_Get_Result_List
-typed_array_reference_list(Arena *arena, Config *parsed, Config_Compound *compound, Config_RValue_Type type);
-
-#define config_fixed_string_var(c,v,s,o,a) config_placed_string_var((c),(v),(s),(o),(a),sizeof(a))
-
-////////////////////////////////
-
-function b32
-config_bool_var(Config *config, String_Const_u8 var_name, i32 subscript, b32* var_out){
-    Config_Get_Result result = config_var(config, var_name, subscript);
-    b32 success = (result.success && result.type == ConfigRValueType_Boolean);
-    if (success){
-        *var_out = result.boolean;
-    }
-    return(success);
-}
-function b32
-config_bool_var(Config *config, String_Const_u8 var_name, i32 subscript, b8 *var_out){
-    b32 temp = false;
-    b32 success = config_bool_var(config, var_name, subscript, &temp);
-    if (success){
-        *var_out = (temp != false);
-    }
-    return(success);
-}
-function b32
-config_bool_var(Config *config, char *var_name, i32 subscript, b32* var_out){
-    return(config_bool_var(config, SCu8(var_name), subscript, var_out));
-}
-function b32
-config_bool_var(Config *config, char* var_name, i32 subscript, b8 *var_out){
-    b32 temp = false;
-    b32 success = config_bool_var(config, SCu8(var_name), subscript, &temp);
-    if (success){
-        *var_out = (temp != false);
-    }
-    return(success);
-}
-
-function b32
-config_int_var(Config *config, String_Const_u8 var_name, i32 subscript, i32* var_out){
-    Config_Get_Result result = config_var(config, var_name, subscript);
-    b32 success = result.success && result.type == ConfigRValueType_Integer;
-    if (success){
-        *var_out = result.integer;
-    }
-    return(success);
-}
-
-function b32
-config_int_var(Config *config, char *var_name, i32 subscript, i32* var_out){
-    return(config_int_var(config, SCu8(var_name), subscript, var_out));
-}
 
 function b32
 config_uint_var(Config *config, String_Const_u8 var_name, i32 subscript, u32* var_out){
@@ -1051,23 +1018,6 @@ config_string_var(Config *config, char *var_name, i32 subscript, String_Const_u8
     return(config_string_var(config, SCu8(var_name), subscript, var_out));
 }
 
-function b32
-config_placed_string_var(Config *config, String_Const_u8 var_name, i32 subscript, String_Const_u8* var_out, u8 *space, u64 space_size){
-    Config_Get_Result result = config_var(config, var_name, subscript);
-    b32 success = (result.success && result.type == ConfigRValueType_String);
-    if (success){
-        u64 size = result.string.size;
-        size = clamp_top(size, space_size);
-        block_copy(space, result.string.str, size);
-        *var_out = SCu8(space, size);
-    }
-    return(success);
-}
-
-function b32
-config_placed_string_var(Config *config, char *var_name, i32 subscript, String_Const_u8* var_out, u8 *space, u64 space_size){
-    return(config_placed_string_var(config, SCu8(var_name), subscript, var_out, space, space_size));
-}
 
 function b32
 config_compound_var(Config *config, String_Const_u8 var_name, i32 subscript, Config_Compound** var_out){
@@ -1084,56 +1034,7 @@ config_compound_var(Config *config, char *var_name, i32 subscript, Config_Compou
     return(config_compound_var(config, SCu8(var_name), subscript, var_out));
 }
 
-function b32
-config_compound_bool_member(Config *config, Config_Compound *compound,
-                            String_Const_u8 var_name, i32 index, b32* var_out){
-    Config_Get_Result result = config_compound_member(config, compound, var_name, index);
-    b32 success = result.success && result.type == ConfigRValueType_Boolean;
-    if (success){
-        *var_out = result.boolean;
-    }
-    return(success);
-}
 
-function b32
-config_compound_bool_member(Config *config, Config_Compound *compound,
-                            char *var_name, i32 index, b32* var_out){
-    return(config_compound_bool_member(config, compound, SCu8(var_name), index, var_out));
-}
-
-function b32
-config_compound_int_member(Config *config, Config_Compound *compound,
-                           String_Const_u8 var_name, i32 index, i32* var_out){
-    Config_Get_Result result = config_compound_member(config, compound, var_name, index);
-    b32 success = result.success && result.type == ConfigRValueType_Integer;
-    if (success){
-        *var_out = result.integer;
-    }
-    return(success);
-}
-
-function b32
-config_compound_int_member(Config *config, Config_Compound *compound,
-                           char *var_name, i32 index, i32* var_out){
-    return(config_compound_int_member(config, compound, SCu8(var_name), index, var_out));
-}
-
-function b32
-config_compound_uint_member(Config *config, Config_Compound *compound,
-                            String_Const_u8 var_name, i32 index, u32* var_out){
-    Config_Get_Result result = config_compound_member(config, compound, var_name, index);
-    b32 success = result.success && result.type == ConfigRValueType_Integer;
-    if (success){
-        *var_out = result.uinteger;
-    }
-    return(success);
-}
-
-function b32
-config_compound_uint_member(Config *config, Config_Compound *compound,
-                            char *var_name, i32 index, u32* var_out){
-    return(config_compound_uint_member(config, compound, SCu8(var_name), index, var_out));
-}
 
 function b32
 config_compound_string_member(Config *config, Config_Compound *compound,
@@ -1152,153 +1053,8 @@ config_compound_string_member(Config *config, Config_Compound *compound,
     return(config_compound_string_member(config, compound, SCu8(var_name), index, var_out));
 }
 
-function b32
-config_compound_placed_string_member(Config *config, Config_Compound *compound,
-                                     String_Const_u8 var_name, i32 index, String_Const_u8* var_out, u8 *space, u64 space_size){
-    Config_Get_Result result = config_compound_member(config, compound, var_name, index);
-    b32 success = (result.success && result.type == ConfigRValueType_String);
-    if (success){
-        u64 size = result.string.size;
-        size = clamp_top(size, space_size);
-        block_copy(space, result.string.str, size);
-        *var_out = SCu8(space, size);
-    }
-    return(success);
-}
 
-function b32
-config_compound_placed_string_member(Config *config, Config_Compound *compound,
-                                     char *var_name, i32 index, String_Const_u8* var_out, u8 *space, u64 space_size){
-    return(config_compound_placed_string_member(config, compound, SCu8(var_name), index, var_out, space, space_size));
-}
 
-function b32
-config_compound_compound_member(Config *config, Config_Compound *compound,
-                                String_Const_u8 var_name, i32 index, Config_Compound** var_out){
-    Config_Get_Result result = config_compound_member(config, compound, var_name, index);
-    b32 success = (result.success && result.type == ConfigRValueType_Compound);
-    if (success){
-        *var_out = result.compound;
-    }
-    return(success);
-}
-
-function b32
-config_compound_compound_member(Config *config, Config_Compound *compound,
-                                char *var_name, i32 index, Config_Compound** var_out){
-    return(config_compound_compound_member(config, compound, SCu8(var_name), index, var_out));
-}
-
-function Iteration_Step_Result
-typed_bool_array_iteration_step(Config *config, Config_Compound *compound, i32 index, b32* var_out){
-    Config_Iteration_Step_Result result = typed_array_iteration_step(config, compound, ConfigRValueType_Boolean, index);
-    b32 success = (result.step == Iteration_Good);
-    if (success){
-        *var_out = result.get.boolean;
-    }
-    return(result.step);
-}
-
-function Iteration_Step_Result
-typed_int_array_iteration_step(Config *config, Config_Compound *compound, i32 index, i32* var_out){
-    Config_Iteration_Step_Result result = typed_array_iteration_step(config, compound, ConfigRValueType_Integer, index);
-    b32 success = (result.step == Iteration_Good);
-    if (success){
-        *var_out = result.get.integer;
-    }
-    return(result.step);
-}
-
-function Iteration_Step_Result
-typed_uint_array_iteration_step(Config *config, Config_Compound *compound, i32 index, u32* var_out){
-    Config_Iteration_Step_Result result = typed_array_iteration_step(config, compound, ConfigRValueType_Integer, index);
-    b32 success = (result.step == Iteration_Good);
-    if (success){
-        *var_out = result.get.uinteger;
-    }
-    return(result.step);
-}
-
-function Iteration_Step_Result
-typed_string_array_iteration_step(Config *config, Config_Compound *compound, i32 index, String_Const_u8* var_out){
-    Config_Iteration_Step_Result result = typed_array_iteration_step(config, compound, ConfigRValueType_String, index);
-    b32 success = (result.step == Iteration_Good);
-    if (success){
-        *var_out = result.get.string;
-    }
-    return(result.step);
-}
-
-function Iteration_Step_Result
-typed_placed_string_array_iteration_step(Config *config, Config_Compound *compound, i32 index, String_Const_u8* var_out, u8 *space, u64 space_size){
-    Config_Iteration_Step_Result result = typed_array_iteration_step(config, compound, ConfigRValueType_String, index);
-    b32 success = (result.step == Iteration_Good);
-    if (success){
-        u64 size = result.get.string.size;
-        size = clamp_top(size, space_size);
-        block_copy(space, result.get.string.str, size);
-        *var_out = SCu8(space, size);
-    }
-    return(result.step);
-}
-
-function Iteration_Step_Result
-typed_compound_array_iteration_step(Config *config, Config_Compound *compound, i32 index, Config_Compound** var_out){
-    Config_Iteration_Step_Result result = typed_array_iteration_step(config, compound, ConfigRValueType_Compound, index);
-    b32 success = (result.step == Iteration_Good);
-    if (success){
-        *var_out = result.get.compound;
-    }
-    return(result.step);
-}
-
-function i32
-typed_bool_array_get_count(Config *config, Config_Compound *compound){
-    i32 count = typed_array_get_count(config, compound, ConfigRValueType_Boolean);
-    return(count);
-}
-
-function i32
-typed_int_array_get_count(Config *config, Config_Compound *compound){
-    i32 count = typed_array_get_count(config, compound, ConfigRValueType_Integer);
-    return(count);
-}
-
-function i32
-typed_string_array_get_count(Config *config, Config_Compound *compound){
-    i32 count = typed_array_get_count(config, compound, ConfigRValueType_String);
-    return(count);
-}
-
-function i32
-typed_compound_array_get_count(Config *config, Config_Compound *compound){
-    i32 count = typed_array_get_count(config, compound, ConfigRValueType_Compound);
-    return(count);
-}
-
-function Config_Get_Result_List
-typed_bool_array_reference_list(Arena *arena, Config *config, Config_Compound *compound){
-    Config_Get_Result_List list = typed_array_reference_list(arena, config, compound, ConfigRValueType_Boolean);
-    return(list);
-}
-
-function Config_Get_Result_List
-typed_int_array_reference_list(Arena *arena, Config *config, Config_Compound *compound){
-    Config_Get_Result_List list = typed_array_reference_list(arena, config, compound, ConfigRValueType_Integer);
-    return(list);
-}
-
-function Config_Get_Result_List
-typed_string_array_reference_list(Arena *arena, Config *config, Config_Compound *compound){
-    Config_Get_Result_List list = typed_array_reference_list(arena, config, compound, ConfigRValueType_String);
-    return(list);
-}
-
-function Config_Get_Result_List
-typed_compound_array_reference_list(Arena *arena, Config *config, Config_Compound *compound){
-    Config_Get_Result_List list = typed_array_reference_list(arena, config, compound, ConfigRValueType_Compound);
-    return(list);
-}
 
 ////////////////////////////////
 
@@ -1319,21 +1075,6 @@ typed_array_iteration_step(Config *parsed, Config_Compound *compound, Config_RVa
     return(result);
 }
 
-function i32
-typed_array_get_count(Config *parsed, Config_Compound *compound, Config_RValue_Type type){
-    i32 count = 0;
-    for (i32 i = 0;; ++i){
-        Config_Iteration_Step_Result result = typed_array_iteration_step(parsed, compound, type, i);
-        if (result.step == Iteration_Skip){
-            continue;
-        }
-        else if (result.step == Iteration_Quit){
-            break;
-        }
-        count += 1;
-    }
-    return(count);
-}
 
 function Config_Get_Result_List
 typed_array_reference_list(Arena *arena, Config *parsed, Config_Compound *compound, Config_RValue_Type type){
@@ -1351,6 +1092,11 @@ typed_array_reference_list(Arena *arena, Config *parsed, Config_Compound *compou
         zdll_push_back(list.first, list.last, node);
         list.count += 1;
     }
+    return(list);
+}
+function Config_Get_Result_List
+typed_compound_array_reference_list(Arena *arena, Config *config, Config_Compound *compound){
+    Config_Get_Result_List list = typed_array_reference_list(arena, config, compound, ConfigRValueType_Compound);
     return(list);
 }
 
@@ -1646,10 +1392,13 @@ CUSTOM_COMMAND_SIG(go_to_user_directory)
 {
     Scratch_Block scratch(app);
     String_Const_u8 hot = push_hot_directory(app, scratch);
-    String8 user_5ed_path = system_get_path(scratch, SystemPath_UserDirectory);
-    String8 cmd = push_u8_stringf(scratch, "mkdir \"%.*s\"", string_expand(user_5ed_path));
-    exec_system_command(app, 0, buffer_identifier(0), hot, cmd, 0);
-    set_hot_directory(app, user_5ed_path);
+    String8 config_dir = system_get_path(scratch, SystemPath_ConfigDirectory);
+    if (config_dir.size > 0){
+        String8 quoted = prj_shell_quote(scratch, config_dir);
+        String8 cmd = push_u8_stringf(scratch, "mkdir -p -- %.*s", string_expand(quoted));
+        exec_system_command(app, 0, buffer_identifier(0), hot, cmd, 0);
+        set_hot_directory(app, config_dir);
+    }
 }
 
 // BOTTOM

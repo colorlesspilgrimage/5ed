@@ -20,7 +20,9 @@ def_search_list_add_path(Arena *arena, List_String_Const_u8 *list, String_Const_
 function void
 def_search_list_add_system_path(Arena *arena, List_String_Const_u8 *list, System_Path_Code path){
     String_Const_u8 path_string = system_get_path(arena, path);
-    string_list_push(arena, list, path_string);
+    if (path_string.size > 0){
+        string_list_push(arena, list, path_string);
+    }
 }
 
 ////////////////////////////////

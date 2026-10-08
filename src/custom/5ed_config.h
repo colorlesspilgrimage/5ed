@@ -1,5 +1,21 @@
 /*
 5ed_config.h - Configuration structs.
+
+Grammar for .5ed files.
+config.5ed, bindings.5ed, themes and project.5ed all use this grammar.
+Only project.5ed requires version(2);.
+Strings accept the escapes \\, \", \n, \t and \0.
+
+sconfig := [version] {assignment}
+version := "version" "(" INTEGER ")" ";"
+assignment := lvalue "=" rvalue ";"
+lvalue := IDENTIFIER [ "[" INTEGER "]" ]
+rvalue := lvalue | BOOLEAN | INTEGER | STRING | CHARACTER | "{" compound_body
+compound_body := compound_element {"," compound_element} [","] "}"
+compound_element := ["." (IDENTIFIER | INTEGER) "="] rvalue
+
+A compound can contain a compound to a depth of config_parser_max_depth.
+A deeper compound is a parse error.
 */
 
 // TOP
@@ -38,8 +54,14 @@ struct Config_Parser{
     
     Arena *arena;
     
+    i32 depth;
+    
     Config_Error_List errors;
 };
+
+// A hostile project.5ed from an untrusted checkout must not use all memory.
+global const i32 config_parser_max_depth = 64;
+global const i32 config_dump_max_count = 65536;
 
 struct Config_LValue{
     String_Const_u8 identifier;
@@ -210,7 +232,6 @@ function Config_RValue*           def_config_parser_rvalue    (Config_Parser *ct
 function Config_Compound*         def_config_parser_compound  (Config_Parser *ctx);
 function Config_Compound_Element* def_config_parser_element   (Config_Parser *ctx);
 
-function Config* def_config_parse(Application_Links *app, Arena *arena, String_Const_u8 file_name, String_Const_u8 data, Token_Array array);
 function Config* def_config_from_text(Application_Links *app, Arena *arena, String_Const_u8 file_name, String_Const_u8 data);
 
 function Config_Error* def_config_push_error(Arena *arena, Config_Error_List *list, String_Const_u8 file_name, u8 *pos, char *error_text);
@@ -225,6 +246,7 @@ function void def_config_parser_recover(Config_Parser *ctx);
 // NOTE(allen): Dump Config to Variables
 
 function Variable_Handle def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_ID key, Config *config);
+function Variable_Handle def_fill_var_from_config(Arena *scratch, Variable_Handle parent, String_ID key, Config *config, b32 *complete);
 
 ////////////////////////////////
 // NOTE(allen): Config Variables Read

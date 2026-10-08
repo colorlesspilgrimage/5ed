@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port, Linux-only cleanup (item 1), base layer and source layout (item 2), one executable (item 3), generated code (item 4). See `git log`.
+Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port, Linux-only cleanup (item 1), base layer and source layout (item 2), one executable (item 3), generated code (item 4), config (item 5). See `git log`.
 
 Items are roughly in the order intended. Each should leave the tree building and the editor launching.
 
@@ -66,13 +66,53 @@ Items are roughly in the order intended. Each should leave the tree building and
 - A clean Debug configure and build took 10.2 s before and 6.4 s after.
 - Debug `build/5ed` was 3553776 bytes before and 3087584 bytes after.
 
-## 5. Configuration
+## 5. Configuration (done)
 
-- Collapse the layers of config parsers (`5ed_config.cpp`, the `.5ed` bindings/theme format, `project.5ed`, `5ed_config_grammar.txt`) into one.
-- Use XDG paths (`~/.config/5ed`) instead of `~/.5ed`, and `$XDG_DATA_HOME` for data.
-- Project generation (`setup_new_project`, `setup_build_sh`, `prj_generate_project`): quote or escape user-typed text written to `build.sh` and `project.5ed`. It is written raw today (same as upstream).
-- Decide the overwrite rule for `setup_new_project`. Files are now created with `O_EXCL|O_NOFOLLOW`, so an existing `build.sh` or `project.5ed` is left untouched and a "could not create" message is printed. Add an explicit confirm-and-overwrite path, or keep and document the current rule.
-- Decide whether to keep the `fkey_command` block fix (`,` instead of `;` for `.F1`/`.F2`). It changes the generated `project.5ed` and goes past the Linux-only cleanup. It also fixes the `Project errors:` that `load_project` reported on every generated project.
+- One parser path: `def_config_from_text`.
+- `def_config_parse` is gone.
+- The v1 project reader is gone.
+- The removed files are `5ed_prj_v1.cpp`, `5ed_prj_v1.h` and `5ed_config_grammar.txt`.
+- Those three files are 500 lines removed.
+- This fork has no v1 project files and never wrote them.
+- A project with `version(0)`, `version(1)` or no version prints an error.
+- That project loads nothing. It needs `version(2);`.
+- Unused typed accessors are removed.
+- The theme loader and the bindings loader keep the accessors they call.
+- The grammar is in `src/custom/5ed_config.h`.
+- `config.5ed`, `bindings.5ed`, themes and `project.5ed` use that grammar.
+- Config directory: `$XDG_CONFIG_HOME/5ed` when that value starts with `/`.
+- Otherwise the config directory is `$HOME/.config/5ed`.
+- Data directory: `$XDG_DATA_HOME/5ed` when that value starts with `/`.
+- Otherwise the data directory is `$HOME/.local/share/5ed`.
+- 5ed uses `$HOME` only when it starts with `/`.
+- Search order: project dir, config dir, data dir, binary dir.
+- 5ed does not read `~/.5ed/`. Move files from that folder.
+- `-U <dir>` replaces the config directory only. 5ed adds a `/` at the end.
+- Typed text in `build.sh` is wrapped in POSIX single quotes.
+- A `'` in typed text becomes `'\''`.
+- `"$code"` and `"$PWD"` are quoted.
+- `build.sh` uses `cd --`. An output dir that starts with `-` is not a `cd` option.
+- `.5ed` string values escape `\`, `"`, newline, tab and NUL.
+- `project_reprint` uses the same escapes. A value then parses back to the same bytes.
+- A shell command is shell-quoted, then escaped for the string literal.
+- A control character is refused. No file is written.
+- A script name that holds `/` is refused.
+- `build.sh` uses `cd --`. An output dir `-` becomes `./-`.
+- A compound can be 64 levels deep. A deeper compound is a parse error.
+- 5ed loads at most 65536 values from one file.
+- These limits stop a hostile `project.5ed` (for example `a = { a };`).
+- Before, such a file made 5ed crash with a stack overflow.
+- `default_flags_sh` and `default_compiler_sh` stay raw.
+- They come from `config.5ed`. They are not typed text.
+- An existing `build.sh` or `project.5ed` is not changed.
+- The message names the file.
+- It says to delete the file and run the command again.
+- Reason: the hot directory can be an untrusted checkout.
+- `O_EXCL|O_NOFOLLOW` is the guard that `check-security` tests.
+- `fkey_command` keeps `,` between `.F1` and `.F2`.
+- Reason: the grammar needs `,` between compound elements.
+- With `;`, every generated project printed `Project errors:`.
+- `git diff --shortstat` shows 19 files changed, 650 insertions, 919 deletions.
 
 ## 6. Platform and rendering
 
