@@ -223,5 +223,5 @@ add_custom_target(check-command-line
 # Security regression checks. See scripts/check-security.sh.
 add_custom_target(check-security
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-security.sh ${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}
-    DEPENDS 5ed_base
+    DEPENDS 5ed_base 5ed
     VERBATIM)
