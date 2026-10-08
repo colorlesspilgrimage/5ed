@@ -5,34 +5,6 @@ the default 5ed behavior.
 
 // TOP
 
-CUSTOM_ID(attachment, view_rewrite_loc);
-CUSTOM_ID(attachment, view_next_rewrite_loc);
-CUSTOM_ID(attachment, view_paste_index_loc);
-CUSTOM_ID(attachment, view_is_passive_loc);
-CUSTOM_ID(attachment, view_snap_mark_to_cursor);
-CUSTOM_ID(attachment, view_ui_data);
-CUSTOM_ID(attachment, view_highlight_range);
-CUSTOM_ID(attachment, view_highlight_buffer);
-CUSTOM_ID(attachment, view_render_hook);
-CUSTOM_ID(attachment, view_word_complete_menu);
-CUSTOM_ID(attachment, view_lister_loc);
-CUSTOM_ID(attachment, view_previous_buffer);
-
-CUSTOM_ID(attachment, buffer_map_id);
-CUSTOM_ID(attachment, buffer_eol_setting);
-CUSTOM_ID(attachment, buffer_lex_task);
-CUSTOM_ID(attachment, buffer_wrap_lines);
-
-CUSTOM_ID(attachment, sticky_jump_marker_handle);
-CUSTOM_ID(attachment, attachment_tokens);
-
-////////////////////////////////
-
-#if 0
-CUSTOM_ID(command_map, mapid_global);
-CUSTOM_ID(command_map, mapid_file);
-CUSTOM_ID(command_map, mapid_code);
-#endif
 
 ////////////////////////////////
 

@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port, Linux-only cleanup (item 1), base layer and source layout (item 2), one executable (item 3). See `git log`.
+Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port, Linux-only cleanup (item 1), base layer and source layout (item 2), one executable (item 3), generated code (item 4). See `git log`.
 
 Items are roughly in the order intended. Each should leave the tree building and the editor launching.
 
@@ -13,12 +13,12 @@ Items are roughly in the order intended. Each should leave the tree building and
 
 - The build writes one executable, `build/5ed`. It does not write `5ed_app.so` or `custom_5ed.so`.
 - Core and custom stay two translation units. CMake links both object libraries into `5ed`.
-- The `custom_api` vtable stays. Item 4 decides about the API generators.
+- The `custom_api` vtable stays. Item 4 decides about the API generators. (removed in item 4)
 - The `system_api` vtable is gone. Platform functions have external linkage. Callers use them directly.
-- The `font_api` and `graphics_api` vtables stay. Item 4 or item 6 may remove them.
+- The `font_api` and `graphics_api` vtables stay. Item 4 or item 6 may remove them. (removed in item 4)
 - Customisation is an edit of `src/custom/` and a rebuild. There is no plugin path.
 - `app_get_functions` stays. The platform calls it directly.
-- `system_load_library`, `system_get_proc`, and `system_release_library` stay unused. Item 4 decides.
+- `system_load_library`, `system_get_proc`, and `system_release_library` stay unused. Item 4 decides. (removed in item 4)
 - IPO stays off. The Release IPO link printed 57 warnings and still produced `main`.
 - Each warning has this form: `warning: type of symbol 'glAttachShader' changed from 2 to 1`.
 - The other symbols are the `gl*` names loaded by `GL_FUNC` in `src/platform/opengl/5ed_opengl_funcs.h`.
@@ -28,13 +28,43 @@ Items are roughly in the order intended. Each should leave the tree building and
 - No display was available, so launch time was not measured.
 - `CMAKE_POSITION_INDEPENDENT_CODE` stays on.
 
-## 4. Simplify generated code
+## 4. Simplify generated code (done)
 
-- Command metadata: replace the preprocess-and-parse step (`5ed_metadata_generator.cpp`) with something simpler, for example an explicit registration table.
-- API generators (`5ed_api_definition*.cpp`, `5ed_api_parser*.cpp`, `5ed_system_api.cpp`, `5ed_font_api.cpp`, `5ed_graphics_api.cpp`): decide whether the vtable APIs still need generating once item 3 lands.
-- Lexer generator (`custom/lexer_generator`, 4k lines): keep as is, replace, or hand-write the C++ lexer. Find out why regenerated `lexer_cpp.cpp` differs from the checked-in one before trusting `regen-lexer`.
-- Docs system (`docs/`, `5ed_doc_*`, `check-api-docs`): compiled into the core today. Decide whether to keep it.
-- `check-api-docs` reports 6 API functions with no documentation. Document them, or drop the check if the docs system is removed.
+- Command metadata is a checked-in list, `src/custom/5ed_command_list.h`, with 264 commands.
+- No build step makes the list.
+- `scripts/check-commands.sh` (`check-commands`) checks the list against the command definitions.
+- `CUSTOM_DOC` and `CUSTOM_ID` are gone.
+- Managed IDs are in `src/custom/5ed_managed_ids.h`.
+- The API generators are removed.
+- The vtable APIs did not need generating once item 3 landed.
+- Core defines the custom API with external linkage.
+- The declarations are in `src/base/5ed_custom_api.h`.
+- System functions are in `src/base/5ed_system_api.h`.
+- `font_make_face` and the two `graphics_*` functions are declared in `src/core/5ed_font_interface.h`.
+- The platform defines those three functions.
+- `app_get_functions` has no `load_vtables`.
+- `system_load_library`, `system_get_proc` and `system_release_library` are removed.
+- Item 3 left those three unused.
+- The lexer generator stays as a developer tool (`regen-lexer`).
+- `main()` seeded the random generator with `time(0)`.
+- The keyword table layout changed on every run.
+- The checked-in header had a hand edit (`static` on `token_cpp_kind_names`).
+- The seed is fixed and the generator prints `static`.
+- The checked-in output is regenerated.
+- `regen-lexer` now gives no diff.
+- The docs system is removed (`src/core/docs/`, `5ed_doc_*`, `check-api-docs`).
+- It was 4000+ lines of Custom API text for a plugin path that no longer exists.
+- It served two commands only (`custom_api_documentation`, `command_documentation`).
+- It was out of date (6 missing items, many dead-call warnings).
+- Command descriptions stay in the command list and show in the `command_lister`.
+- A user `bindings.5ed` that names the two removed commands shows an unknown-command error.
+- `check-api-docs` is dropped with the docs system.
+- The 6 undocumented functions are no longer a finding.
+- `git diff --shortstat master` shows 86 files changed, 2694 insertions, 13840 deletions.
+- Files in `src/base/generated/` went from 18 to 3.
+- The command-metadata generator run is gone.
+- A clean Debug configure and build took 10.2 s before and 6.4 s after.
+- Debug `build/5ed` was 3553776 bytes before and 3087584 bytes after.
 
 ## 5. Configuration
 

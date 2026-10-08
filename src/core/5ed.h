@@ -79,11 +79,8 @@ typedef App_Step_Sig(App_Step);
 
 typedef b32 Log_Function(String_Const_u8 str);
 typedef Log_Function *App_Get_Logger(void);
-typedef void App_Load_VTables(API_VTable_font *vtable_font,
-                              API_VTable_graphics *vtable_graphics);
 
 struct App_Functions{
-    App_Load_VTables *load_vtables;
     App_Get_Logger *get_logger;
     App_Read_Command_Line *read_command_line;
     App_Init *init;

@@ -44,7 +44,6 @@ long_braces(Application_Links *app, char *text, i32 size){
 }
 
 CUSTOM_COMMAND_SIG(open_long_braces)
-CUSTOM_DOC("At the cursor, insert a '{' and '}' separated by a blank line.")
 {
     char text[] = "{\n\n}";
     i32 size = sizeof(text) - 1;
@@ -52,7 +51,6 @@ CUSTOM_DOC("At the cursor, insert a '{' and '}' separated by a blank line.")
 }
 
 CUSTOM_COMMAND_SIG(open_long_braces_semicolon)
-CUSTOM_DOC("At the cursor, insert a '{' and '};' separated by a blank line.")
 {
     char text[] = "{\n\n};";
     i32 size = sizeof(text) - 1;
@@ -60,7 +58,6 @@ CUSTOM_DOC("At the cursor, insert a '{' and '};' separated by a blank line.")
 }
 
 CUSTOM_COMMAND_SIG(open_long_braces_break)
-CUSTOM_DOC("At the cursor, insert a '{' and '}break;' separated by a blank line.")
 {
     char text[] = "{\n\n}break;";
     i32 size = sizeof(text) - 1;
@@ -68,37 +65,31 @@ CUSTOM_DOC("At the cursor, insert a '{' and '}break;' separated by a blank line.
 }
 
 CUSTOM_COMMAND_SIG(if0_off)
-CUSTOM_DOC("Surround the range between the cursor and mark with an '#if 0' and an '#endif'")
 {
     place_begin_and_end_on_own_lines(app, "#if 0", "#endif");
 }
 
 CUSTOM_COMMAND_SIG(write_todo)
-CUSTOM_DOC("At the cursor, insert a '// TODO' comment, includes user name if it was specified in config.5ed.")
 {
     write_named_comment_string(app, "TODO");
 }
 
 CUSTOM_COMMAND_SIG(write_hack)
-CUSTOM_DOC("At the cursor, insert a '// HACK' comment, includes user name if it was specified in config.5ed.")
 {
     write_named_comment_string(app, "HACK");
 }
 
 CUSTOM_COMMAND_SIG(write_note)
-CUSTOM_DOC("At the cursor, insert a '// NOTE' comment, includes user name if it was specified in config.5ed.")
 {
     write_named_comment_string(app, "NOTE");
 }
 
 CUSTOM_COMMAND_SIG(write_block)
-CUSTOM_DOC("At the cursor, insert a block comment.")
 {
     place_begin_and_end_on_own_lines(app, "/* ", " */");
 }
 
 CUSTOM_COMMAND_SIG(write_zero_struct)
-CUSTOM_DOC("At the cursor, insert a ' = {};'.")
 {
     write_string(app, string_u8_litexpr(" = {};"));
 }
@@ -123,7 +114,6 @@ c_line_comment_starts_at_position(Application_Links *app, Buffer_ID buffer, i64 
 }
 
 CUSTOM_COMMAND_SIG(comment_line)
-CUSTOM_DOC("Insert '//' at the beginning of the line after leading whitespace.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -135,7 +125,6 @@ CUSTOM_DOC("Insert '//' at the beginning of the line after leading whitespace.")
 }
 
 CUSTOM_COMMAND_SIG(uncomment_line)
-CUSTOM_DOC("If present, delete '//' at the beginning of the line after leading whitespace.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -147,7 +136,6 @@ CUSTOM_DOC("If present, delete '//' at the beginning of the line after leading w
 }
 
 CUSTOM_COMMAND_SIG(comment_line_toggle)
-CUSTOM_DOC("Turns uncommented lines into commented lines and vice versa for comments starting with '//'.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -185,7 +173,7 @@ static Snippet default_snippets[] = {
     {"op/=", "Z&\noperator/=(Z &a, Z b){\n,\n}\n", 0, 26},
     
     // for 5ed development
-    {"4command", "CUSTOM_COMMAND_SIG()\nCUSTOM_DOC()\n{\n\n}\n", 19, 32},
+    {"4command", "CUSTOM_COMMAND_SIG()\n{\n\n}\n", 19, 19},
     {"4app", "Application_Links *app", 22, 22},
     
 #if defined(SNIPPET_EXPANSION)
@@ -235,7 +223,6 @@ get_snippet_from_user(Application_Links *app, Snippet *snippets, i32 snippet_cou
 }
 
 CUSTOM_UI_COMMAND_SIG(snippet_lister)
-CUSTOM_DOC("Opens a snippet lister for inserting whole pre-written snippets of text.")
 {
     View_ID view = get_this_ctx_view(app, Access_ReadWrite);
     if (view != 0){

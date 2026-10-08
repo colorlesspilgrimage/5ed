@@ -60,7 +60,6 @@ add_library(5ed_base STATIC
     src/base/5ed_buffer_seek_constructors.cpp
     src/base/5ed_layout_lookup.cpp
     src/base/5ed_log_helpers.cpp
-    src/base/5ed_doc_content_types.cpp
     src/base/5ed_mem.cpp
     src/base/5ed_malloc_allocator.cpp
     src/base/5ed_stdio_file.cpp
@@ -73,36 +72,9 @@ set_target_properties(5ed_base PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 ################################################################################
 # Custom layer.
-# Table paths are relative to the source root.
-# Keep the generated table in the build tree.
+# The command table is the checked-in list src/custom/5ed_command_list.h.
 
-add_executable(metadata_generator src/custom/5ed_metadata_generator.cpp)
-target_link_libraries(metadata_generator PRIVATE 5ed_common 5ed_base)
-
-file(GLOB_RECURSE CUSTOM_LAYER_FILES CONFIGURE_DEPENDS
-    ${PROJECT_SOURCE_DIR}/src/custom/*.cpp ${PROJECT_SOURCE_DIR}/src/custom/*.h)
-list(FILTER CUSTOM_LAYER_FILES EXCLUDE REGEX "/src/custom/(lexer_generator|languages)/")
-
-set(GENERATED_ROOT ${CMAKE_BINARY_DIR}/gen)
-set(GENERATED_METADATA
-    ${GENERATED_ROOT}/generated/command_metadata.h
-    ${GENERATED_ROOT}/generated/managed_id_metadata.cpp)
-add_custom_command(
-    OUTPUT ${GENERATED_METADATA}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${GENERATED_ROOT}/generated
-    COMMAND ${CMAKE_CXX_COMPILER} -std=c++11 -E -DMETA_PASS -Isrc
-            src/custom/5ed_default_bindings.cpp -o ${GENERATED_ROOT}/command_metadata.i
-    COMMAND metadata_generator -R ${GENERATED_ROOT} ${GENERATED_ROOT}/command_metadata.i
-    DEPENDS metadata_generator ${CUSTOM_LAYER_FILES}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    COMMENT "Generating command metadata"
-    VERBATIM)
-add_custom_target(command_metadata DEPENDS ${GENERATED_METADATA})
-
-# managed_id_metadata.cpp is #included by 5ed_default_bindings.cpp, not compiled on its own.
-set_source_files_properties(${GENERATED_METADATA} PROPERTIES HEADER_FILE_ONLY TRUE)
-add_library(5ed_custom OBJECT src/custom/5ed_default_bindings.cpp ${GENERATED_METADATA})
-target_include_directories(5ed_custom PRIVATE ${GENERATED_ROOT})
+add_library(5ed_custom OBJECT src/custom/5ed_default_bindings.cpp)
 target_link_libraries(5ed_custom PRIVATE 5ed_common 5ed_base)
 
 ################################################################################
@@ -136,7 +108,7 @@ add_dependencies(5ed 5ed_runtime_files)
 # Developer tools are not part of the default build.
 # regen-* rewrites checked-in files in src/base/generated/.
 # regen does not run regen-lexer.
-# That output differs from the checked-in lexer_cpp.cpp.
+# regen-lexer output is the same on every run and equals the checked-in files.
 # Run regen-lexer only when the lexer definition changes.
 # Do not build regen-lexer with a target that compiles the lexer.
 # Regenerated keycodes differ only in indentation.
@@ -156,29 +128,22 @@ endfunction()
 
 fiveed_tool(tool_lexer_gen src/custom/languages/5ed_cpp_lexer_gen.cpp)
 fiveed_tool(tool_keycodes src/core/tools/5ed_generate_keycodes.cpp)
-fiveed_tool(tool_system_api src/core/tools/5ed_system_api.cpp)
-fiveed_tool(tool_font_api src/core/tools/5ed_font_api.cpp)
-fiveed_tool(tool_graphics_api src/core/tools/5ed_graphics_api.cpp)
-fiveed_tool(tool_api_parser src/core/tools/5ed_api_parser_main.cpp)
-fiveed_tool(tool_api_docs src/core/docs/5ed_doc_custom_api_main.cpp)
 
 fiveed_regen(regen-lexer tool_lexer_gen)
 fiveed_regen(regen-keycodes tool_keycodes)
-fiveed_regen(regen-system-api tool_system_api)
-fiveed_regen(regen-font-api tool_font_api)
-fiveed_regen(regen-graphics-api tool_graphics_api)
-# Generates custom_api_* from the API annotations in 5ed_api_implementation.cpp.
-fiveed_regen(regen-custom-api tool_api_parser src/core/5ed_api_implementation.cpp)
-fiveed_regen(check-api-docs tool_api_docs)
 
 add_custom_target(regen)
-add_dependencies(regen regen-keycodes regen-system-api regen-font-api
-                       regen-graphics-api regen-custom-api)
+add_dependencies(regen regen-keycodes)
 
-# Builds every generator tool. It does not run them, so no checked-in file changes.
+# Builds the lexer tool and the keycode tool. It does not run them.
 add_custom_target(check-tools)
-add_dependencies(check-tools tool_lexer_gen tool_keycodes tool_system_api tool_font_api
-                             tool_graphics_api tool_api_parser tool_api_docs)
+add_dependencies(check-tools tool_lexer_gen tool_keycodes)
+
+# Runs the command-list check and its tests. Not part of ALL.
+add_custom_target(check-commands
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-commands.sh ${PROJECT_SOURCE_DIR}
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/test-check-commands.sh ${PROJECT_SOURCE_DIR}
+    VERBATIM)
 
 # The tools link 5ed_base too, so define-once also checks their objects.
 add_custom_target(check-structure
@@ -191,10 +156,7 @@ add_dependencies(check-structure 5ed check-tools)
 add_executable(test_project_file EXCLUDE_FROM_ALL
     src/custom/tests/5ed_project_file_test.cpp
     src/custom/tests/5ed_project_file_stubs.cpp)
-target_include_directories(test_project_file PRIVATE ${GENERATED_ROOT})
 target_link_libraries(test_project_file PRIVATE 5ed_common 5ed_base 5ed_core)
-# command_metadata makes the generated command metadata that the test includes.
-add_dependencies(test_project_file command_metadata)
 add_custom_target(check-project-file
     COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/test-project
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/test-project

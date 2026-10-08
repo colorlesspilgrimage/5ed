@@ -57,7 +57,6 @@ jump_to_jump_lister_result(Application_Links *app, View_ID view,
 }
 
 CUSTOM_COMMAND_SIG(view_jump_list_with_lister)
-CUSTOM_DOC("When executed on a buffer with jumps, creates a persistent lister for all the jumps")
 {
     Heap *heap = &global_heap;
     View_ID view = get_active_view(app, Access_Always);

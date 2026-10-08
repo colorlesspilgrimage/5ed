@@ -989,7 +989,6 @@ log_graph__click_jump_to_event_source(Application_Links *app, Vec2_f32 m_p){
 }
 
 CUSTOM_UI_COMMAND_SIG(show_the_log_graph)
-CUSTOM_DOC("Parses *log* and displays the 'log graph' UI")
 {
     if (log_view != 0){
         return;

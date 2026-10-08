@@ -84,7 +84,6 @@ rewrite_lines_to_lf(Application_Links *app, Buffer_ID buffer){
 ////////////////////////////////
 
 CUSTOM_COMMAND_SIG(set_eol_mode_to_crlf)
-CUSTOM_DOC("Puts the buffer in crlf line ending mode.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -97,7 +96,6 @@ CUSTOM_DOC("Puts the buffer in crlf line ending mode.")
 }
 
 CUSTOM_COMMAND_SIG(set_eol_mode_to_lf)
-CUSTOM_DOC("Puts the buffer in lf line ending mode.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -110,7 +108,6 @@ CUSTOM_DOC("Puts the buffer in lf line ending mode.")
 }
 
 CUSTOM_COMMAND_SIG(set_eol_mode_to_binary)
-CUSTOM_DOC("Puts the buffer in bin line ending mode.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -123,7 +120,6 @@ CUSTOM_DOC("Puts the buffer in bin line ending mode.")
 }
 
 CUSTOM_COMMAND_SIG(set_eol_mode_from_contents)
-CUSTOM_DOC("Sets the buffer's line ending mode to match the contents of the buffer.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);

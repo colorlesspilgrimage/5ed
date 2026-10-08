@@ -31,24 +31,14 @@
 #include "base/5ed_codepoint_map.h"
 #include "base/5ed_buffer_seek_constructors.h"
 #include "base/5ed_layout_lookup.h"
-#include "base/5ed_default_colors.h"
 #include "base/5ed_system_types.h"
 #include "core/5ed_font_interface.h"
 
-#include "base/generated/system_api.h"
-
-#define STATIC_LINK_API
-#include "base/generated/graphics_api.h"
-
-#define STATIC_LINK_API
-#include "base/generated/font_api.h"
+#include "base/5ed_system_api.h"
 
 #include "core/5ed_font_set.h"
 #include "core/5ed_render_target.h"
 #include "core/5ed.h"
-
-#include "base/generated/graphics_api.cpp"
-#include "base/generated/font_api.cpp"
 
 
 #include "platform/5ed_font_provider_freetype.h"
@@ -564,19 +554,19 @@ os_popup_error(char *title, char *message){
 #include "platform/opengl/5ed_opengl_funcs.h"
 #include "platform/opengl/5ed_opengl_render.cpp"
 
-internal
-graphics_get_texture_sig(){
+u32
+graphics_get_texture(Vec3_i32 dim, Texture_Kind texture_kind){
     return(gl__get_texture(dim, texture_kind));
 }
 
-internal
-graphics_fill_texture_sig(){
+b32
+graphics_fill_texture(Texture_Kind texture_kind, u32 texture, Vec3_i32 p, Vec3_i32 dim, void *data){
     return(gl__fill_texture(texture_kind, texture, p, dim, data));
 }
 
 ////////////////////////////
 
-internal Face*
+Face*
 font_make_face(Arena* arena, Face_Description* description, f32 scale_factor) {
     
     Face_Description local_description = *description;
@@ -1314,7 +1304,8 @@ linux_clipboard_recv(XSelectionEvent* ev) {
     }
 }
 
-system_get_clipboard_sig(){
+String_Const_u8
+system_get_clipboard(Arena* arena, i32 index){
     // TODO(inso): index?
     return(push_string_copy(arena, linuxvars.clipboard_contents));
 }
@@ -1747,11 +1738,6 @@ main(int argc, char **argv){
     }
     
     
-    API_VTable_graphics graphics_vtable = {};
-    graphics_api_fill_vtable(&graphics_vtable);
-    
-    API_VTable_font font_vtable = {};
-    font_api_fill_vtable(&font_vtable);
     
     linuxvars.frame_arena = make_arena_system();
     linuxvars.clipboard_arena = make_arena_system();
@@ -1769,7 +1755,6 @@ main(int argc, char **argv){
     
     App_Functions app = app_get_functions();
     
-    app.load_vtables(&font_vtable, &graphics_vtable);
     // get_logger runs log_init.
     linuxvars.log_string = app.get_logger();
     

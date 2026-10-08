@@ -24,16 +24,12 @@
 #include "base/5ed_codepoint_map.h"
 #include "base/5ed_buffer_seek_constructors.h"
 #include "base/5ed_layout_lookup.h"
-#include "base/5ed_doc_content_types.h"
 #include "base/5ed_stdio_file.h"
-#include "base/5ed_default_colors.h"
-#define DYNAMIC_LINK_API
-#include "base/generated/custom_api.h"
+#include "base/5ed_custom_api.h"
+#include "custom/5ed_managed_ids.h"
 #include "base/5ed_system_types.h"
-#include "base/generated/system_api.h"
-#if !defined(META_PASS)
-#include "generated/command_metadata.h"
-#endif
+#include "base/5ed_system_api.h"
+#include "custom/5ed_command_table.h"
 
 #include "base/5ed_token.h"
 #include "base/generated/lexer_cpp.h"
@@ -75,10 +71,7 @@
 
 
 
-#define DYNAMIC_LINK_API
-#include "base/generated/custom_api.cpp"
 #include "base/5ed_profile_macros.h"
-#include "custom/5ed_custom.cpp"
 #include "custom/5ed_async_tasks.cpp"
 
 
@@ -120,8 +113,6 @@
 #include "custom/5ed_miblo_numbers.cpp"
 #include "custom/5ed_profile_inspect.cpp"
 #include "custom/5ed_tutorial.cpp"
-#include "custom/5ed_doc_commands.cpp"
-#include "custom/5ed_docs.cpp"
 #include "custom/5ed_variables.cpp"
 #include "custom/5ed_audio.cpp"
 #include "custom/5ed_search_list.cpp"

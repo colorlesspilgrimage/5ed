@@ -266,7 +266,6 @@ list_all_functions(Application_Links *app, Buffer_ID optional_target_buffer){
 }
 
 CUSTOM_COMMAND_SIG(list_all_functions_current_buffer)
-CUSTOM_DOC("Creates a jump list of lines of the current buffer that appear to define or declare functions.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -276,7 +275,6 @@ CUSTOM_DOC("Creates a jump list of lines of the current buffer that appear to de
 }
 
 CUSTOM_UI_COMMAND_SIG(list_all_functions_current_buffer_lister)
-CUSTOM_DOC("Creates a lister of locations that look like function definitions and declarations in the buffer.")
 {
     Heap *heap = &global_heap;
     View_ID view = get_active_view(app, Access_ReadVisible);
@@ -294,13 +292,11 @@ CUSTOM_DOC("Creates a lister of locations that look like function definitions an
 }
 
 CUSTOM_COMMAND_SIG(list_all_functions_all_buffers)
-CUSTOM_DOC("Creates a jump list of lines from all buffers that appear to define or declare functions.")
 {
     list_all_functions(app, 0);
 }
 
 CUSTOM_UI_COMMAND_SIG(list_all_functions_all_buffers_lister)
-CUSTOM_DOC("Creates a lister of locations that look like function definitions and declarations all buffers.")
 {
     Heap *heap = &global_heap;
     list_all_functions(app, 0);

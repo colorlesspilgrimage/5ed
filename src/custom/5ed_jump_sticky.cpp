@@ -346,7 +346,6 @@ get_index_exact_from_list(Application_Links *app, Marker_List *list, i64 line){
 }
 
 CUSTOM_COMMAND_SIG(goto_jump_at_cursor)
-CUSTOM_DOC("If the cursor is found to be on a jump location, parses the jump location and brings up the file and position in another view and changes the active panel to the view containing the jump.")
 {
     Heap *heap = &global_heap;
     
@@ -373,7 +372,6 @@ CUSTOM_DOC("If the cursor is found to be on a jump location, parses the jump loc
 }
 
 CUSTOM_COMMAND_SIG(goto_jump_at_cursor_same_panel)
-CUSTOM_DOC("If the cursor is found to be on a jump location, parses the jump location and brings up the file and position in this view, losing the compilation output or jump list.")
 {
     Heap *heap = &global_heap;
     
@@ -462,7 +460,6 @@ get_locked_jump_state(Application_Links *app, Heap *heap){
 }
 
 CUSTOM_COMMAND_SIG(goto_next_jump)
-CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to the next jump in the buffer, skipping sub jump locations.")
 {
     Heap *heap = &global_heap;
     
@@ -479,7 +476,7 @@ CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to th
 }
 
 CUSTOM_COMMAND_SIG(goto_prev_jump)
-CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to the previous jump in the buffer, skipping sub jump locations."){
+{
     Heap *heap = &global_heap;
     
     Locked_Jump_State jump_state = get_locked_jump_state(app, heap);
@@ -492,7 +489,6 @@ CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to th
 }
 
 CUSTOM_COMMAND_SIG(goto_next_jump_no_skips)
-CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to the next jump in the buffer, and does not skip sub jump locations.")
 {
     Heap *heap = &global_heap;
     
@@ -509,7 +505,6 @@ CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to th
 }
 
 CUSTOM_COMMAND_SIG(goto_prev_jump_no_skips)
-CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to the previous jump in the buffer, and does not skip sub jump locations.")
 {
     Heap *heap = &global_heap;
     
@@ -523,7 +518,6 @@ CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to th
 }
 
 CUSTOM_COMMAND_SIG(goto_first_jump)
-CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to the first jump in the buffer.")
 {
     Heap *heap = &global_heap;
     
@@ -540,7 +534,6 @@ CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to th
 }
 
 CUSTOM_COMMAND_SIG(goto_first_jump_same_panel_sticky)
-CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to the first jump in the buffer and views the buffer in the panel where the jump list was.")
 {
     Heap *heap = &global_heap;
     
@@ -562,7 +555,6 @@ CUSTOM_DOC("If a buffer containing jump locations has been locked in, goes to th
 //
 
 CUSTOM_COMMAND_SIG(if_read_only_goto_position)
-CUSTOM_DOC("If the buffer in the active view is writable, inserts a character, otherwise performs goto_jump_at_cursor.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -579,7 +571,6 @@ CUSTOM_DOC("If the buffer in the active view is writable, inserts a character, o
 }
 
 CUSTOM_COMMAND_SIG(if_read_only_goto_position_same_panel)
-CUSTOM_DOC("If the buffer in the active view is writable, inserts a character, otherwise performs goto_jump_at_cursor_same_panel.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);

@@ -409,7 +409,6 @@ auto_indent_buffer(Application_Links *app, Buffer_ID buffer, Range_i64 pos){
 ////////////////////////////////
 
 CUSTOM_COMMAND_SIG(auto_indent_whole_file)
-CUSTOM_DOC("Audo-indents the entire current buffer.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -418,7 +417,6 @@ CUSTOM_DOC("Audo-indents the entire current buffer.")
 }
 
 CUSTOM_COMMAND_SIG(auto_indent_line_at_cursor)
-CUSTOM_DOC("Auto-indents the line on which the cursor sits.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -428,7 +426,6 @@ CUSTOM_DOC("Auto-indents the line on which the cursor sits.")
 }
 
 CUSTOM_COMMAND_SIG(auto_indent_range)
-CUSTOM_DOC("Auto-indents the range between the cursor and the mark.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -438,7 +435,6 @@ CUSTOM_DOC("Auto-indents the range between the cursor and the mark.")
 }
 
 CUSTOM_COMMAND_SIG(write_text_and_auto_indent)
-CUSTOM_DOC("Inserts text and auto-indents the line on which the cursor sits if any of the text contains 'layout punctuation' such as ;:{}()[]# and new lines.")
 {
     ProfileScope(app, "write and auto indent");
     User_Input in = get_current_input(app);

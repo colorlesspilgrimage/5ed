@@ -3170,7 +3170,7 @@ gen_tokens(Arena *scratch, Token_Kind_Set tokens, FILE *out){
     char *full_name = gen_token_full_name(scratch, SCu8("COUNT"));
     fprintf(out, "%s = %d,\n", full_name, counter);
     fprintf(out, "};\n");
-    fprintf(out, "char *token_" LANG_NAME_LOWER_STR "_kind_names[] = {\n");
+    fprintf(out, "static char *token_" LANG_NAME_LOWER_STR "_kind_names[] = {\n");
     for (Token_Kind_Node *node = tokens.first;
          node != 0;
          node = node->next){
@@ -3892,7 +3892,6 @@ gen_contiguous_control_flow_lexer(Arena *scratch, Token_Kind_Set tokens, Lexer_M
 ////////////////////////////////
 
 #include <stdio.h>
-#include <time.h>
 
 internal void
 build_language_model(void);
@@ -3910,7 +3909,8 @@ file_read_all(Arena *arena, FILE *file){
 }
 
 int main(void){
-    pcg32_srandom(time(0), time(0));
+    // The seed is fixed so that the output is the same on every run.
+    pcg32_srandom(0x5ED5ED5ED5ED5ED5ull, 0xC0FFEE5EDC0FFEEull);
     
     Base_Allocator *allocator = get_allocator_malloc();
     sm_helper_init(allocator);

@@ -1600,7 +1600,6 @@ load_folder_of_themes_into_live_set(Application_Links *app, String_Const_u8 path
 // NOTE(allen): Commands
 
 CUSTOM_COMMAND_SIG(load_theme_current_buffer)
-CUSTOM_DOC("Parse the current buffer as a theme file and add the theme to the theme list. If the buffer has a .5ed postfix in it's name, it is removed when the name is saved.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -1644,7 +1643,6 @@ CUSTOM_DOC("Parse the current buffer as a theme file and add the theme to the th
 }
 
 CUSTOM_COMMAND_SIG(go_to_user_directory)
-CUSTOM_DOC("Go to the 5ed user directory")
 {
     Scratch_Block scratch(app);
     String_Const_u8 hot = push_hot_directory(app, scratch);

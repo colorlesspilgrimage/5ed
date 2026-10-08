@@ -99,7 +99,7 @@ fi
 copy=$WORK/copy
 mkdir -p "$copy"
 cp -r "$ROOT/src" "$ROOT/scripts" "$ROOT/ship_files" "$ROOT/CMakeLists.txt" "$ROOT/.gitignore" "$copy/"
-printf '#include "base/5ed_stringf.cpp"\n#include "../5ed_bad.h"\n' >> "$copy/src/custom/5ed_custom.cpp"
+printf '#include "base/5ed_stringf.cpp"\n#include "../5ed_bad.h"\n' >> "$copy/src/custom/5ed_default_bindings.cpp"
 "$CHECK" "$copy" "$WORK" > "$WORK/out.txt" 2>&1 || true
 if grep -q "^FAIL: base-cpp-not-included" "$WORK/out.txt" &&
    grep -q "^FAIL: include-style" "$WORK/out.txt"; then

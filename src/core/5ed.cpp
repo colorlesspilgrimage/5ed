@@ -173,11 +173,6 @@ models_init(void){
     return(models);
 }
 
-internal void
-app_load_vtables(API_VTable_font *vtable_font, API_VTable_graphics *vtable_graphics){
-    font_api_read_vtable(vtable_font);
-    graphics_api_read_vtable(vtable_graphics);
-}
 
 internal Log_Function*
 app_get_logger(void){
@@ -208,9 +203,6 @@ App_Init_Sig(app_init){
     
     managed_ids_init(tctx->allocator, &models->managed_id_set);
     
-    API_VTable_custom custom_vtable = {};
-    custom_api_fill_vtable(&custom_vtable);
-    custom_layer_bind_api(&custom_vtable);
     
     coroutine_system_init(&models->coroutines);
     
@@ -823,7 +815,6 @@ App_Step_Sig(app_step){
 extern "C" App_Get_Functions_Sig(app_get_functions){
     App_Functions result = {};
     
-    result.load_vtables = app_load_vtables;
     result.get_logger = app_get_logger;
     result.read_command_line = app_read_command_line;
     result.init = app_init;

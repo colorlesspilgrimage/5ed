@@ -1236,7 +1236,6 @@ return(layout_virt_indent_index(app, arena, buffer, range, face, width, wrap_lin
 }
 
 CUSTOM_COMMAND_SIG(toggle_virtual_whitespace)
-CUSTOM_DOC("Toggles virtual whitespace for all files.")
 {
 String_ID key = vars_save_string_lit("enable_virtual_whitespace");
 b32 enable_virtual_whitespace = def_get_config_b32(key);

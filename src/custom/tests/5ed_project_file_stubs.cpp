@@ -36,14 +36,6 @@ b32 system_load_close(Plat_Handle handle)
 File_Attributes system_save_file(Arena* scratch, char* file_name, String_Const_u8 data)
 { return {}; }
 
-b32 system_load_library(Arena* scratch, String_Const_u8 file_name, System_Library* out)
-{ return {}; }
-
-b32 system_release_library(System_Library handle)
-{ return {}; }
-
-Void_Func* system_get_proc(System_Library handle, char* proc_name)
-{ return {}; }
 
 u64 system_now_time(void)
 { return {}; }
@@ -177,5 +169,17 @@ void system_set_source_mixer(void* ctx, Audio_Mix_Sources_Function* mix_func)
 
 void system_set_destination_mixer(Audio_Mix_Destination_Function* mix_func)
 {}
+
+struct Face;
+typedef i32 Texture_Kind;
+
+Face* font_make_face(Arena* arena, Face_Description* description, f32 scale_factor)
+{ return 0; }
+
+u32 graphics_get_texture(Vec3_i32 dim, Texture_Kind texture_kind)
+{ return 0; }
+
+b32 graphics_fill_texture(Texture_Kind texture_kind, u32 texture, Vec3_i32 p, Vec3_i32 dim, void* data)
+{ return 0; }
 
 // BOTTOM

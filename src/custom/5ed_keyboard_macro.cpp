@@ -39,7 +39,6 @@ get_current_input_is_virtual(Application_Links *app){
 ////////////////////////////////
 
 CUSTOM_COMMAND_SIG(keyboard_macro_start_recording)
-CUSTOM_DOC("Start macro recording, do nothing if macro recording is already started")
 {
     if (global_keyboard_macro_is_recording ||
         get_current_input_is_virtual(app)){
@@ -52,7 +51,6 @@ CUSTOM_DOC("Start macro recording, do nothing if macro recording is already star
 }
 
 CUSTOM_COMMAND_SIG(keyboard_macro_finish_recording)
-CUSTOM_DOC("Stop macro recording, do nothing if macro recording is not already started")
 {
     if (!global_keyboard_macro_is_recording ||
         get_current_input_is_virtual(app)){
@@ -75,7 +73,6 @@ CUSTOM_DOC("Stop macro recording, do nothing if macro recording is not already s
 }
 
 CUSTOM_COMMAND_SIG(keyboard_macro_replay)
-CUSTOM_DOC("Replay the most recently recorded keyboard macro")
 {
     if (global_keyboard_macro_is_recording ||
         get_current_input_is_virtual(app)){
