@@ -226,6 +226,30 @@ api_write_param_list(FILE *out, API_Call *call){
 }
 
 function void
+api_write_decls(Arena *scratch, API_Definition *api, API_Generation_Flag flags, FILE *out, char *linkage){
+    for (API_Call *call = api->first_call;
+         call != 0;
+         call = call->next){
+        String_Const_u8 callable_name = api_get_callable_name(scratch, api->name, call->name, flags);
+        fprintf(out, "%s%.*s %.*s(",
+                linkage,
+                string_expand(call->return_type),
+                string_expand(callable_name));
+        api_write_param_list(out, call);
+        fprintf(out, ");\n");
+    }
+}
+
+function String_Const_u8
+api_out_path(Arena *arena, String_Const_u8 dir, String_Const_u8 root, String_Const_u8 name, char *suffix){
+    return(push_u8_stringf(arena, "%.*s%.*s%.*s%s",
+                           string_expand(dir),
+                           string_expand(root),
+                           string_expand(name),
+                           suffix));
+}
+
+function void
 generate_api_master_list(Arena *scratch, API_Definition *api, API_Generation_Flag flags, FILE *out){
     for (API_Call *call = api->first_call;
          call != 0;
@@ -255,16 +279,7 @@ generate_header(Arena *scratch, API_Definition *api, API_Generation_Flag flags, 
     }
     
     if (HasFlag(flags, APIGeneration_NoVTable)){
-        for (API_Call *call = api->first_call;
-             call != 0;
-             call = call->next){
-            String_Const_u8 callable_name = api_get_callable_name(scratch, api->name, call->name, flags);
-            fprintf(out, "%.*s %.*s(",
-                    string_expand(call->return_type),
-                    string_expand(callable_name));
-            api_write_param_list(out, call);
-            fprintf(out, ");\n");
-        }
+        api_write_decls(scratch, api, flags, out, "");
         return;
     }
     
@@ -293,16 +308,7 @@ generate_header(Arena *scratch, API_Definition *api, API_Generation_Flag flags, 
     fprintf(out, "};\n");
     
     fprintf(out, "#if defined(STATIC_LINK_API)\n");
-    for (API_Call *call = api->first_call;
-         call != 0;
-         call = call->next){
-        String_Const_u8 callable_name = api_get_callable_name(scratch, api->name, call->name, flags);
-        fprintf(out, "internal %.*s %.*s(",
-                string_expand(call->return_type),
-                string_expand(callable_name));
-        api_write_param_list(out, call);
-        fprintf(out, ");\n");
-    }
+    api_write_decls(scratch, api, flags, out, "internal ");
     fprintf(out, "#undef STATIC_LINK_API\n");
     fprintf(out, "#elif defined(DYNAMIC_LINK_API)\n");
     for (API_Call *call = api->first_call;
@@ -420,25 +426,10 @@ api_definition_generate_api_includes(Arena *arena, API_Definition *api, Generate
         }break;
     }
     
-    fname_ml = push_u8_stringf(arena, "%.*s%.*s%.*s_api_master_list.h",
-                               string_expand(path_to_self),
-                               string_expand(root),
-                               string_expand(api->name));
-    
-    fname_h = push_u8_stringf(arena, "%.*s%.*s%.*s_api.h",
-                              string_expand(path_to_self),
-                              string_expand(root),
-                              string_expand(api->name));
-    
-    fname_cpp = push_u8_stringf(arena, "%.*s%.*s%.*s_api.cpp",
-                                string_expand(path_to_self),
-                                string_expand(root),
-                                string_expand(api->name));
-    
-    fname_con = push_u8_stringf(arena, "%.*s%.*s%.*s_api_constructor.cpp",
-                                string_expand(path_to_self),
-                                string_expand(root),
-                                string_expand(api->name));
+    fname_ml = api_out_path(arena, path_to_self, root, api->name, "_api_master_list.h");
+    fname_h = api_out_path(arena, path_to_self, root, api->name, "_api.h");
+    fname_cpp = api_out_path(arena, path_to_self, root, api->name, "_api.cpp");
+    fname_con = api_out_path(arena, path_to_self, root, api->name, "_api_constructor.cpp");
     
     FILE *out_file_ml = fopen((char*)fname_ml.str, "wb");
     if (out_file_ml == 0){

@@ -141,22 +141,23 @@ thread_profile_record_pop(Application_Links *app, u64 time, Profile_ID id){
 
 ////////////////////////////////
 
+template <typename T>
 function void
 profile_block__init(Thread_Context *tctx, Profile_Global_List *list,
-                    String_Const_u8 name, String_Const_u8 location, Profile_Block *block){
+                    String_Const_u8 name, String_Const_u8 location, T *block){
     block->tctx = tctx;
     block->list = list;
     block->is_closed = false;
     block->id = thread_profile_record_push(tctx, system_now_time(), name, location);
 }
+
+template <typename T>
 function void
-profile_block__init(Thread_Context *tctx, Profile_Global_List *list,
-                    String_Const_u8 name, String_Const_u8 location,
-                    Profile_Scope_Block *block){
-    block->tctx = tctx;
-    block->list = list;
-    block->is_closed = false;
-    block->id = thread_profile_record_push(tctx, system_now_time(), name, location);
+profile_block__close(T *block){
+    if (!block->is_closed){
+        thread_profile_record_pop(block->tctx, system_now_time(), block->id);
+        block->is_closed = true;
+    }
 }
 
 ////////
@@ -167,19 +168,16 @@ Profile_Block::Profile_Block(Thread_Context *tctx, Profile_Global_List *list,
 }
 Profile_Block::Profile_Block(Application_Links *app, String_Const_u8 name,
                              String_Const_u8 location){
-    Thread_Context *v_tctx = get_thread_context(app);
-    Profile_Global_List *v_list = get_core_profile_list(app);
-    profile_block__init(v_tctx, v_list, name, location, this);
+    Thread_Context *tctx = get_thread_context(app);
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_block__init(tctx, list, name, location, this);
 }
 Profile_Block::~Profile_Block(){
     this->close_now();
 }
 void
 Profile_Block::close_now(){
-    if (!this->is_closed){
-        thread_profile_record_pop(this->tctx, system_now_time(), this->id);
-        this->is_closed = true;
-    }
+    profile_block__close(this);
 }
 
 ////////
@@ -190,9 +188,9 @@ Profile_Scope_Block::Profile_Scope_Block(Thread_Context *tctx, Profile_Global_Li
 }
 Profile_Scope_Block::Profile_Scope_Block(Application_Links *app, String_Const_u8 name,
                                          String_Const_u8 location){
-    Thread_Context *v_tctx = get_thread_context(app);
-    Profile_Global_List *v_list = get_core_profile_list(app);
-    profile_block__init(v_tctx, v_list, name, location, this);
+    Thread_Context *tctx = get_thread_context(app);
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_block__init(tctx, list, name, location, this);
 }
 Profile_Scope_Block::~Profile_Scope_Block(){
     this->close_now();
@@ -200,10 +198,7 @@ Profile_Scope_Block::~Profile_Scope_Block(){
 }
 void
 Profile_Scope_Block::close_now(){
-    if (!this->is_closed){
-        thread_profile_record_pop(this->tctx, system_now_time(), this->id);
-        this->is_closed = true;
-    }
+    profile_block__close(this);
 }
 
 
