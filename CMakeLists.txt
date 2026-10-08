@@ -141,9 +141,11 @@ add_dependencies(regen regen-keycodes)
 add_custom_target(check-tools)
 add_dependencies(check-tools tool_lexer_gen tool_keycodes)
 
-# Checks the command list against the command definitions. Not part of ALL.
+# Checks the command list against the command definitions.
+# Then runs the regression tests of that check. Not part of ALL.
 add_custom_target(check-commands
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-commands.sh ${PROJECT_SOURCE_DIR}
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/test-check-commands.sh ${PROJECT_SOURCE_DIR}
     VERBATIM)
 
 # The tools link 5ed_base too, so define-once also checks their objects.

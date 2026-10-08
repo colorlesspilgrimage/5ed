@@ -25,21 +25,23 @@ fail_check() {
     fail=1
 }
 
-# Definitions are lines that are only a command signature.
-grep -rhE '^CUSTOM_(UI_)?COMMAND_SIG\([A-Za-z0-9_]+\)[[:space:]]*$' \
-    "$ROOT/src/custom" --include='*.cpp' > "$TMP/def_raw.txt" || true
+# A definition is a line that starts with a command signature.
+# Text can follow the signature, for example "{" or a comment.
+# A line with ";" after the signature is a declaration, not a definition.
+sig='^[[:space:]]*CUSTOM_(UI_)?COMMAND_SIG[[:space:]]*\([[:space:]]*[A-Za-z0-9_]+[[:space:]]*\)'
+grep -rhE "$sig" "$ROOT/src/custom" --include='*.cpp' --include='*.h' \
+    | grep -vE "$sig[[:space:]]*;" > "$TMP/def_raw.txt" || true
 : > "$TMP/defs"
 while IFS= read -r line; do
     [ -n "$line" ] || continue
     line=${line%$'\r'}
-    if [ "${line#CUSTOM_UI_COMMAND_SIG(}" != "$line" ]; then
-        kind=true
-        name=${line#CUSTOM_UI_COMMAND_SIG(}
-    else
-        kind=false
-        name=${line#CUSTOM_COMMAND_SIG(}
-    fi
-    name=${name%)}
+    case "$line" in
+        *CUSTOM_UI_COMMAND_SIG*) kind=true ;;
+        *) kind=false ;;
+    esac
+    name=${line#*(}
+    name=${name%%)*}
+    name=${name//[[:space:]]/}
     printf '%s %s\n' "$name" "$kind" >> "$TMP/defs"
 done < "$TMP/def_raw.txt"
 sort -o "$TMP/defs" "$TMP/defs"
@@ -84,8 +86,9 @@ else
     pass "no duplicate names"
 fi
 
-missing=$(comm -23 "$TMP/def_names" "$TMP/list_names" || true)
-extra=$(comm -13 "$TMP/def_names" "$TMP/list_names" || true)
+# Compare unique names. The duplicate check above reports repeated names.
+missing=$(comm -23 <(sort -u "$TMP/def_names") <(sort -u "$TMP/list_names") || true)
+extra=$(comm -13 <(sort -u "$TMP/def_names") <(sort -u "$TMP/list_names") || true)
 if [ -n "$missing" ] || [ -n "$extra" ]; then
     if [ -n "$missing" ]; then
         while IFS= read -r name; do
