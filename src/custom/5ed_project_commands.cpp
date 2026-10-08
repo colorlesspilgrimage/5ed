@@ -419,12 +419,27 @@ prj_shell_quote(Arena *arena, String8 text){
     return(SCu8(out, j));
 }
 
+// Escape text for a .5ed string literal.
+// The parser reads the escapes \\, \", \n, \t and \0.
+// A raw newline would end the literal, so escape it too.
+function u8
+prj_escape_code(u8 c){
+    u8 result = 0;
+    switch (c){
+        case '\\': result = '\\'; break;
+        case '"':  result = '"';  break;
+        case '\n': result = 'n';  break;
+        case '\t': result = 't';  break;
+        case 0:    result = '0';  break;
+    }
+    return(result);
+}
+
 function String8
 prj_escape_string(Arena *arena, String8 text){
     u64 extra = 0;
     for (u64 i = 0; i < text.size; i += 1){
-        u8 c = text.str[i];
-        if (c == '\\' || c == '"'){
+        if (prj_escape_code(text.str[i]) != 0){
             extra += 1;
         }
     }
@@ -432,12 +447,16 @@ prj_escape_string(Arena *arena, String8 text){
     u64 j = 0;
     for (u64 i = 0; i < text.size; i += 1){
         u8 c = text.str[i];
-        if (c == '\\' || c == '"'){
+        u8 code = prj_escape_code(c);
+        if (code != 0){
             out[j] = '\\';
+            out[j + 1] = code;
+            j += 2;
+        }
+        else{
+            out[j] = c;
             j += 1;
         }
-        out[j] = c;
-        j += 1;
     }
     out[j] = 0;
     return(SCu8(out, j));
@@ -484,7 +503,7 @@ prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_p
         fprintf(sh_script, "#!/bin/bash\n\n");
         fprintf(sh_script, "code=\"$PWD\"\n");
         fprintf(sh_script, "opts=%.*s\n", string_expand(opts));
-        fprintf(sh_script, "cd %.*s > /dev/null\n", string_expand(od_q));
+        fprintf(sh_script, "cd -- %.*s > /dev/null\n", string_expand(od_q));
         fprintf(sh_script, "%.*s $opts \"$code\"/%.*s -o %.*s\n",
                 string_expand(compiler), string_expand(cf_q), string_expand(bf_q));
         fprintf(sh_script, "cd \"$code\" > /dev/null\n");

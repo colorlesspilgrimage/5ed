@@ -59,6 +59,7 @@ harness="$work/prj_harness.cpp"
     echo '#include <unistd.h>'
     extract_function "$src" prj_text_is_safe
     extract_function "$src" prj_shell_quote
+    extract_function "$src" prj_escape_code
     extract_function "$src" prj_escape_string
     extract_function "$src" prj_create_new_file
     extract_function "$src" prj_generate_sh
@@ -162,6 +163,17 @@ else
     result=$("$work/prj_harness" "$case_dir" echo main.cpp . "$nl_name")
     if [ "$result" != "0 0" ] || [ -e "$case_dir/build.sh" ] || [ -e "$case_dir/project.5ed" ]; then
         echo "FAIL: a control character was not refused (got '$result')"
+        quote_ok=0
+    fi
+
+    # An output dir that starts with "-" must not be an option of cd.
+    # "cd -L" goes to $HOME. Then the binary goes to the wrong folder.
+    case_dir="$work/dash"
+    mkdir -p "$case_dir/-L" "$case_dir/home"
+    "$work/prj_harness" "$case_dir" "pwd;:" main.cpp -L app > /dev/null
+    got=$(cd "$case_dir" && HOME="$case_dir/home" bash build.sh 2> /dev/null | head -n 1)
+    if [ "$got" != "$case_dir/-L" ]; then
+        echo "FAIL: output dir -L was read as a cd option (build ran in '$got')"
         quote_ok=0
     fi
 

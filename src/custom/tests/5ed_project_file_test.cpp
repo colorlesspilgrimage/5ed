@@ -172,6 +172,41 @@ test_hostile_project(Arena *arena, String8 dir){
     return(ok);
 }
 
+// prj_stringize_project writes values from a loaded project back to a file.
+// A loaded value can hold a newline, a tab or a NUL (from \n, \t, \0).
+// The escaped value must parse back to the same bytes, as one string.
+function b32
+test_escape_round_trip(Arena *arena, String8 dir){
+    b32 ok = true;
+    u8 raw_bytes[] = {'a', '\n', 'b', '\t', 'c', 0, 'd', '\\', 'e', '"', 'f'};
+    String8 raw = SCu8(raw_bytes, sizeof(raw_bytes));
+    String8 escaped = prj_escape_string(arena, raw);
+    String8 path = push_u8_stringf(arena, "%.*s/escape.5ed", string_expand(dir));
+    FILE *file = fopen((char*)path.str, "wb");
+    if (file == 0){
+        printf("FAIL: cannot write %.*s\n", string_expand(path));
+        return(false);
+    }
+    fprintf(file, "version(2);\nx = \"%.*s\";\ny = \"z\";\n", string_expand(escaped));
+    fclose(file);
+    Config *config = test_open_config(arena, path);
+    String8 got_x = {};
+    String8 got_y = {};
+    if (config == 0 || config->errors.count > 0){
+        printf("FAIL: escaped string does not parse\n");
+        ok = false;
+    }
+    else if (!config_string_var(config, "x", 0, &got_x) || !string_match(got_x, raw) ||
+             !config_string_var(config, "y", 0, &got_y) || !string_match(got_y, str8_lit("z"))){
+        printf("FAIL: escaped string round trip\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: escaped string round trip\n");
+    }
+    return(ok);
+}
+
 function b32
 test_command_table(void){
     b32 ok = true;
@@ -261,6 +296,7 @@ main(int argc, char **argv){
     String8 project = push_u8_stringf(&arena, "%.*s/project.5ed", string_expand(dir));
     ok = test_parse_file(&arena, project) && ok;
     ok = test_hostile_project(&arena, dir) && ok;
+    ok = test_escape_round_trip(&arena, dir) && ok;
     for (int i = 2; i < argc; i += 1){
         ok = test_parse_file(&arena, SCu8(argv[i])) && ok;
     }

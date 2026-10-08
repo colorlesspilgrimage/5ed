@@ -80,6 +80,7 @@ function b32 prj_generate_project(Arena *scratch, String8 script_path, String8 s
 
 function b32 prj_text_is_safe(String8 text);
 function String8 prj_shell_quote(Arena *arena, String8 text);
+function u8 prj_escape_code(u8 c);
 function String8 prj_escape_string(Arena *arena, String8 text);
 function void prj_setup_scripts(Application_Links *app, Prj_Setup_Script_Flags flags);
 
