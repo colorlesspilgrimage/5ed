@@ -1,7 +1,8 @@
 #!/bin/bash
-# Security checks for the project setup commands and the check scripts.
+# Security checks for the project setup commands, the check scripts and the
+# 5ed start sequence.
 # Usage: check-security.sh <source root> <build dir>
-# The build dir must hold lib5ed_base.a.
+# The build dir must hold lib5ed_base.a and the 5ed executable.
 set -eu
 
 if [ "$#" -ne 2 ]; then
@@ -26,10 +27,12 @@ fail_check() {
     fail=1
 }
 
-if [ ! -f "$BUILD/lib5ed_base.a" ]; then
-    echo "FAIL: $BUILD/lib5ed_base.a is missing. Build the project first." >&2
-    exit 1
-fi
+for need in lib5ed_base.a 5ed; do
+    if [ ! -f "$BUILD/$need" ]; then
+        echo "FAIL: $BUILD/$need is missing. Build the project first." >&2
+        exit 1
+    fi
+done
 
 # Copy one function from a source file. The function starts at the line
 # "function <type>" before "<name>(". It stops at the first line "}".
@@ -131,6 +134,61 @@ if grep -nE '/tmp/' "$ROOT/scripts/check-structure.sh" > "$work/tmp.txt"; then
     cat "$work/tmp.txt"
 else
     pass "no-fixed-tmp-names"
+fi
+
+# 3. no-user-library-load
+# 5ed must not load a shared library from the user directory at start.
+# The user directory is $HOME/.5ed/. It can hold a file from an untrusted source.
+# 5ed must not load a library that the -d or -D option names.
+# The test library writes a marker file when it is loaded.
+# 5ed stops at the X11 display step because DISPLAY is not set.
+# The X11 message shows that 5ed got past the old library load step.
+lib_src="$work/evil.cpp"
+cat > "$lib_src" <<'EOF'
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+__attribute__((constructor)) static void evil_load(void){
+    const char *path = getenv("EVIL_MARKER");
+    if (path != 0){
+        int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd >= 0){
+            close(fd);
+        }
+    }
+}
+EOF
+if ! "$CXX" -shared -fPIC -w "$lib_src" -o "$work/evil.so" 2> "$work/cc-lib.txt"; then
+    fail_check "no-user-library-load (test library does not compile)"
+    cat "$work/cc-lib.txt"
+else
+    lib_ok=1
+    lib_home="$work/lib-home"
+    mkdir -p "$lib_home/.5ed"
+    cp "$work/evil.so" "$lib_home/.5ed/custom_5ed.so"
+    cp "$work/evil.so" "$lib_home/.5ed/other.so"
+    case_no=0
+    for args in "" "-d other.so" "-D other.so"; do
+        case_no=$((case_no + 1))
+        marker="$work/marker-$case_no"
+        # Word splitting of $args is intended.
+        # shellcheck disable=SC2086
+        (cd "$lib_home" && env -i PATH="$PATH" HOME="$lib_home" EVIL_MARKER="$marker" \
+            timeout 20 "$BUILD/5ed" $args > "$work/run-$case_no.txt" 2>&1) || true
+        if [ -e "$marker" ]; then
+            echo "FAIL: 5ed loaded a library from $lib_home/.5ed (args: '$args')"
+            lib_ok=0
+        elif ! grep -q "Cannot open X11 Display" "$work/run-$case_no.txt"; then
+            echo "FAIL: 5ed did not reach the X11 display step (args: '$args')"
+            cat "$work/run-$case_no.txt"
+            lib_ok=0
+        fi
+    done
+    if [ "$lib_ok" -eq 1 ]; then
+        pass "no-user-library-load"
+    else
+        fail_check "no-user-library-load"
+    fi
 fi
 
 exit "$fail"
