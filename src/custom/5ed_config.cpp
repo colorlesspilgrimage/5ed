@@ -584,10 +584,7 @@ def_config_parser_recover(Config_Parser *ctx){
 function Config_Get_Result
 config_var(Config *config, String_Const_u8 var_name, i32 subscript);
 
-// Write r into dst as l_value.
-// A compound can refer to itself through an l-value (a = { a };).
-// Stop at config_parser_max_depth or after config_dump_max_count values.
-// Return false when a limit stops the dump.
+// A compound can name itself. Stop at the depth and count limits.
 function b32
 def_var_dump_rvalue(Arena *scratch, Config *config, Variable_Handle dst, String_ID l_value, Config_RValue *r, i32 depth, i32 *count){
     if (depth > config_parser_max_depth || *count >= config_dump_max_count){
@@ -725,8 +722,7 @@ def_var_dump_rvalue(Arena *scratch, Config *config, Variable_Handle dst, String_
     return(result);
 }
 
-// Write config into parent as key.
-// Set *complete to false when a limit of def_var_dump_rvalue stops the dump.
+// Set *complete to false when a dump limit stops the write.
 function Variable_Handle
 def_fill_var_from_config(Arena *scratch, Variable_Handle parent, String_ID key, Config *config, b32 *complete){
     Variable_Handle result = vars_get_nil();

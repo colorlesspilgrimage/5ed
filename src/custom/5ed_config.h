@@ -54,14 +54,12 @@ struct Config_Parser{
     
     Arena *arena;
     
-    // Depth of the compound that the parser reads now.
     i32 depth;
     
     Config_Error_List errors;
 };
 
-// Limits that keep a hostile file from using all the stack or memory.
-// A project.5ed can come from an untrusted checkout.
+// A hostile project.5ed from an untrusted checkout must not use all memory.
 global const i32 config_parser_max_depth = 64;
 global const i32 config_dump_max_count = 65536;
 

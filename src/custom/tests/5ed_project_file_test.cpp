@@ -5,10 +5,9 @@
 // TOP
 
 // Usage: project_file_test <empty-dir> [file.5ed ...]
-// The test writes project.5ed and build.sh into <empty-dir> with the
-// setup_new_project generators. Then it parses project.5ed and each other
-// file with the real config parser. Each parse error makes the test fail.
-// The test calls no host API, so it does not need the editor.
+// The test writes project files, then parses them.
+// A parse error fails the test.
+// The test calls no host API.
 
 #include "custom/5ed_default_include.cpp"
 
@@ -19,6 +18,14 @@ custom_layer_init(Application_Links *app){}
 #include <sys/stat.h>
 
 function Config*
+test_parse_data(Arena *arena, String8 file_name, String8 data){
+    Token_List list = lex_full_input_cpp(arena, data);
+    Token_Array array = token_array_from_list(arena, &list);
+    Config_Parser ctx = def_config_parser_init(arena, file_name, data, array);
+    return(def_config_parser_top(&ctx));
+}
+
+function Config*
 test_open_config(Arena *arena, String8 file_name){
     FILE *file = fopen((char*)file_name.str, "rb");
     if (file == 0){
@@ -27,10 +34,7 @@ test_open_config(Arena *arena, String8 file_name){
     }
     String8 data = data_from_file(arena, file);
     fclose(file);
-    Token_List list = lex_full_input_cpp(arena, data);
-    Token_Array array = token_array_from_list(arena, &list);
-    Config_Parser ctx = def_config_parser_init(arena, file_name, data, array);
-    Config *config = def_config_parser_top(&ctx);
+    Config *config = test_parse_data(arena, file_name, data);
     if (config == 0){
         printf("FAIL: no parse result for %.*s\n", string_expand(file_name));
     }
@@ -174,10 +178,29 @@ test_hostile_project(Arena *arena, String8 dir){
 
 function Config*
 test_parse_text(Arena *arena, String8 data){
-    Token_List list = lex_full_input_cpp(arena, data);
-    Token_Array array = token_array_from_list(arena, &list);
-    Config_Parser ctx = def_config_parser_init(arena, str8_lit("limits"), data, array);
-    return(def_config_parser_top(&ctx));
+    return(test_parse_data(arena, str8_lit("limits"), data));
+}
+
+function String8
+test_nested_assign(u8 *dst, i32 depth, b32 put_one){
+    u64 n = 0;
+    block_copy(dst, "x = ", 4);
+    n = 4;
+    for (i32 i = 0; i < depth; i += 1){
+        dst[n] = '{';
+        n += 1;
+    }
+    if (put_one){
+        dst[n] = '1';
+        n += 1;
+    }
+    for (i32 i = 0; i < depth; i += 1){
+        dst[n] = '}';
+        n += 1;
+    }
+    dst[n] = ';';
+    n += 1;
+    return(SCu8(dst, n));
 }
 
 // A hostile project.5ed must not use all the stack or memory.
@@ -188,20 +211,7 @@ test_config_limits(Arena *arena){
     // Deep compound nesting is a parse error, not a stack overflow.
     i32 depth = 200000;
     u8 *deep = push_array(arena, u8, depth*2 + 16);
-    u64 n = 0;
-    block_copy(deep, "x = ", 4);
-    n = 4;
-    for (i32 i = 0; i < depth; i += 1){
-        deep[n] = '{';
-        n += 1;
-    }
-    for (i32 i = 0; i < depth; i += 1){
-        deep[n] = '}';
-        n += 1;
-    }
-    deep[n] = ';';
-    n += 1;
-    Config *config = test_parse_text(arena, SCu8(deep, n));
+    Config *config = test_parse_text(arena, test_nested_assign(deep, depth, false));
     if (config == 0 || config->errors.count == 0){
         printf("FAIL: deep nesting gave no parse error\n");
         ok = false;
@@ -210,23 +220,7 @@ test_config_limits(Arena *arena){
         printf("PASS: deep nesting is a parse error\n");
     }
     
-    // Nesting at the limit still parses.
-    n = 0;
-    block_copy(deep, "x = ", 4);
-    n = 4;
-    for (i32 i = 0; i < config_parser_max_depth; i += 1){
-        deep[n] = '{';
-        n += 1;
-    }
-    deep[n] = '1';
-    n += 1;
-    for (i32 i = 0; i < config_parser_max_depth; i += 1){
-        deep[n] = '}';
-        n += 1;
-    }
-    deep[n] = ';';
-    n += 1;
-    config = test_parse_text(arena, SCu8(deep, n));
+    config = test_parse_text(arena, test_nested_assign(deep, config_parser_max_depth, true));
     if (config == 0 || config->errors.count != 0){
         printf("FAIL: nesting at the limit gave a parse error\n");
         ok = false;
@@ -258,7 +252,6 @@ test_config_limits(Arena *arena){
         }
     }
     
-    // A normal file dumps completely.
     config = test_parse_text(arena, str8_lit("version(2);\nb = 1;\na = { b, { .c = \"x\" } };\n"));
     b32 complete = false;
     if (config != 0){
@@ -274,9 +267,8 @@ test_config_limits(Arena *arena){
     return(ok);
 }
 
-// prj_stringize_project writes values from a loaded project back to a file.
-// A loaded value can hold a newline, a tab or a NUL (from \n, \t, \0).
-// The escaped value must parse back to the same bytes, as one string.
+// A loaded value can hold a newline, a tab or NUL.
+// The escaped text must parse back to the same bytes.
 function b32
 test_escape_round_trip(Arena *arena, String8 dir){
     b32 ok = true;

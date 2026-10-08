@@ -27,7 +27,7 @@ struct Plat_Settings{
     
     b8 use_hinting;
     
-    // -U value. It replaces the config directory only.
+    // -U replaces the config directory only.
     char *user_directory;
 };
 
