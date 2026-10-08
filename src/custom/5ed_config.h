@@ -13,6 +13,9 @@ lvalue := IDENTIFIER [ "[" INTEGER "]" ]
 rvalue := lvalue | BOOLEAN | INTEGER | STRING | CHARACTER | "{" compound_body
 compound_body := compound_element {"," compound_element} [","] "}"
 compound_element := ["." (IDENTIFIER | INTEGER) "="] rvalue
+
+A compound can contain a compound to a depth of config_parser_max_depth.
+A deeper compound is a parse error.
 */
 
 // TOP
@@ -51,8 +54,16 @@ struct Config_Parser{
     
     Arena *arena;
     
+    // Depth of the compound that the parser reads now.
+    i32 depth;
+    
     Config_Error_List errors;
 };
+
+// Limits that keep a hostile file from using all the stack or memory.
+// A project.5ed can come from an untrusted checkout.
+global const i32 config_parser_max_depth = 64;
+global const i32 config_dump_max_count = 65536;
 
 struct Config_LValue{
     String_Const_u8 identifier;
@@ -237,6 +248,7 @@ function void def_config_parser_recover(Config_Parser *ctx);
 // NOTE(allen): Dump Config to Variables
 
 function Variable_Handle def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_ID key, Config *config);
+function Variable_Handle def_fill_var_from_config(Arena *scratch, Variable_Handle parent, String_ID key, Config *config, b32 *complete);
 
 ////////////////////////////////
 // NOTE(allen): Config Variables Read

@@ -84,9 +84,10 @@ Items are roughly in the order intended. Each should leave the tree building and
 - Otherwise the config directory is `$HOME/.config/5ed`.
 - Data directory: `$XDG_DATA_HOME/5ed` when that value starts with `/`.
 - Otherwise the data directory is `$HOME/.local/share/5ed`.
+- 5ed uses `$HOME` only when it starts with `/`.
 - Search order: project dir, config dir, data dir, binary dir.
 - 5ed does not read `~/.5ed/`. Move files from that folder.
-- `-U <dir>` replaces the config directory only.
+- `-U <dir>` replaces the config directory only. 5ed adds a `/` at the end.
 - Typed text in `build.sh` is wrapped in POSIX single quotes.
 - A `'` in typed text becomes `'\''`.
 - `"$code"` and `"$PWD"` are quoted.
@@ -94,6 +95,11 @@ Items are roughly in the order intended. Each should leave the tree building and
 - A shell command is shell-quoted, then escaped for the string literal.
 - A control character is refused. No file is written.
 - A script name that holds `/` is refused.
+- `build.sh` uses `cd --`. An output dir `-` becomes `./-`.
+- A compound can be 64 levels deep. A deeper compound is a parse error.
+- 5ed loads at most 65536 values from one file.
+- These limits stop a hostile `project.5ed` (for example `a = { a };`).
+- Before, such a file made 5ed crash with a stack overflow.
 - `default_flags_sh` and `default_compiler_sh` stay raw.
 - They come from `config.5ed`. They are not typed text.
 - An existing `build.sh` or `project.5ed` is not changed.
