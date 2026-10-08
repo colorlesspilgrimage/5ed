@@ -28,7 +28,7 @@ Edit the files in `src/custom/` and rebuild with `cmake --build build -j`. There
 
 Developer targets are not built by default. `regen` regenerates the keycode file. `regen-lexer` regenerates the C++ lexer tables. That output is the same on every run and equals the checked-in files. `check-structure` checks the source layout and the once-built base library. `check-security` checks that setup does not write through a symlink. It also checks that setup does not change a file that exists. `check-commands` checks the command list against the command definitions.
 
-`check-tools` builds the lexer tool and the keycode tool. `check-project-file` writes a new project and parses it. It also parses this repo's `project.5ed` and `ship_files/config.5ed`. `check-command-line` parses sample command lines with the real core parser. `scripts/test-check-structure.sh` tests the `check-structure` script. `scripts/test-check-commands.sh` tests the `check-commands` script. The `check-commands` target runs it.
+`check-tools` builds the lexer tool and the keycode tool. `check-project-file` writes a new project and parses it. It also parses this repo's `project.5ed` and `ship_files/config.5ed`. `check-command-line` parses sample command lines with the real core parser. `scripts/test-check-structure.sh` tests the `check-structure` script. `scripts/test-check-commands.sh` tests the `check-commands` script. The `check-commands` target runs it. `scripts/test-check-security.sh <source-root> <build-dir>` tests the `check-security` script.
 
 
 # Inherited problems being worked on
