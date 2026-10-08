@@ -132,8 +132,6 @@ fiveed_tool(tool_keycodes src/core/tools/5ed_generate_keycodes.cpp)
 fiveed_regen(regen-lexer tool_lexer_gen)
 fiveed_regen(regen-keycodes tool_keycodes)
 
-# regen does not run regen-lexer.
-# The lexer tables change only when the lexer definition changes.
 add_custom_target(regen)
 add_dependencies(regen regen-keycodes)
 
@@ -141,8 +139,7 @@ add_dependencies(regen regen-keycodes)
 add_custom_target(check-tools)
 add_dependencies(check-tools tool_lexer_gen tool_keycodes)
 
-# Checks the command list against the command definitions.
-# Then runs the regression tests of that check. Not part of ALL.
+# Runs the command-list check and its tests. Not part of ALL.
 add_custom_target(check-commands
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-commands.sh ${PROJECT_SOURCE_DIR}
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/test-check-commands.sh ${PROJECT_SOURCE_DIR}

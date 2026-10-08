@@ -25,6 +25,16 @@ fail_check() {
     fail=1
 }
 
+fail_names() {
+    label=$1
+    names=$2
+    while IFS= read -r name; do
+        fail_check "$label $name"
+    done <<EOF
+$names
+EOF
+}
+
 # A definition is a line that starts with a command signature.
 # Text can follow the signature, for example "{" or a comment.
 # A line with ";" after the signature is a declaration, not a definition.
@@ -77,11 +87,7 @@ sort -o "$TMP/list_names" "$TMP/list_names"
 
 dup=$(uniq -d "$TMP/list_names" || true)
 if [ -n "$dup" ]; then
-    while IFS= read -r name; do
-        fail_check "duplicate $name"
-    done <<EOF
-$dup
-EOF
+    fail_names "duplicate" "$dup"
 else
     pass "no duplicate names"
 fi
@@ -91,18 +97,10 @@ missing=$(comm -23 <(sort -u "$TMP/def_names") <(sort -u "$TMP/list_names") || t
 extra=$(comm -13 <(sort -u "$TMP/def_names") <(sort -u "$TMP/list_names") || true)
 if [ -n "$missing" ] || [ -n "$extra" ]; then
     if [ -n "$missing" ]; then
-        while IFS= read -r name; do
-            fail_check "missing $name"
-        done <<EOF
-$missing
-EOF
+        fail_names "missing" "$missing"
     fi
     if [ -n "$extra" ]; then
-        while IFS= read -r name; do
-            fail_check "extra $name"
-        done <<EOF
-$extra
-EOF
+        fail_names "extra" "$extra"
     fi
 else
     def_count=$(wc -l < "$TMP/def_names")
