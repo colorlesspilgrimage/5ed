@@ -95,8 +95,7 @@ profile_parse_record(Arena *arena, Profile_Inspection *insp,
             record = record->next;
         }
         else{
-            // NOTE(allen): This would mean that record exists and it's id
-            // is greater than id, but then the sub-call should not have returned!
+            // The record id is past this id, but the sub-call should have consumed it.
             InvalidPath;
         }
         
@@ -142,9 +141,7 @@ profile_parse(Arena *arena, Profile_Global_List *src){
         insp_thread->thread_id = node->thread_id;
         insp_thread->name = node->name;
         
-        // NOTE(allen): This is the "negative infinity" range.
-        // We will be "maxing" it against all the ranges durring the parse,
-        // to get the root range.
+        // Start at the inverted range. The parse widens it to the root range.
         Range_u64 time_range = {max_u64, 0};
         insp_thread->root.thread = insp_thread;
         profile_parse_record(arena, &result, &insp_thread->root, node->first_record, &time_range);
@@ -280,7 +277,7 @@ profile_draw_node(Application_Links *app, View_ID view, Face_ID face_id,
     Range_f32 x = rect_range_x(rect);
     Range_f32 y = rect_range_y(rect);
     
-    // TODO(allen): share this shit
+    // TODO(allen): Share the face metric lookup.
     Face_Metrics metrics = get_face_metrics(app, face_id);
     f32 line_height = metrics.line_height;
     f32 normal_advance = metrics.normal_advance;
@@ -411,7 +408,6 @@ profile_draw_node(Application_Links *app, View_ID view, Face_ID face_id,
         x_pos = x.min + x_half_padding;
         f32 y_pos = info_box.y0;
         
-        // NOTE(allen): duration
         {
             f32 duration = ((f32)range_size(node->time))/1000000.f;
             Fancy_Line list = {};
@@ -499,7 +495,7 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
     Rect_f32 prev_clip = draw_set_clip(app, region);
     
     Face_ID face_id = get_face_id(app, 0);
-    // TODO(allen): share this shit
+    // TODO(allen): Share the face metric lookup.
     Face_Metrics metrics = get_face_metrics(app, face_id);
     f32 line_height = metrics.line_height;
     f32 normal_advance = metrics.normal_advance;
@@ -533,7 +529,6 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
         inspect->hover_slot = 0;
         inspect->hover_node = 0;
         
-        // NOTE(allen): tabs
         {
             f32 y = (tabs_y.min + tabs_y.max - line_height)*0.5f;
             f32 x = region.x0;

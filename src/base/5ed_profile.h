@@ -1,5 +1,5 @@
 /*
- * 5ed_profile.cpp - Built in self profiling report.
+ * Profile list and block types.
  */
 
 // TOP

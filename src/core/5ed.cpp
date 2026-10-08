@@ -52,7 +52,7 @@ init_command_line_settings(App_Settings *settings, Plat_Settings *plat_settings,
                                 case 'U': action = CLAct_UserDirectory; break;
                                 
                                 case 'L': action = CLAct_Nothing; break;
-                                //case 'L': enables log, parsed before this is called (because I'm a dumbass)
+                                // -L is parsed in main before this function.
                             }
                         }
                         else if (arg[0] != 0){
@@ -203,27 +203,22 @@ App_Init_Sig(app_init){
     custom_api_fill_vtable(&custom_vtable);
     custom_layer_bind_api(&custom_vtable);
     
-    // NOTE(allen): coroutines
     coroutine_system_init(&models->coroutines);
     
-    // NOTE(allen): font set
     font_set_init(&models->font_set);
     
-    // NOTE(allen): live set
     Arena *arena = models->arena;
     {
         models->view_set.count = 0;
         models->view_set.max = MAX_VIEWS;
         models->view_set.views = push_array(arena, View, models->view_set.max);
         
-        //dll_init_sentinel
         models->view_set.free_sentinel.next = &models->view_set.free_sentinel;
         models->view_set.free_sentinel.prev = &models->view_set.free_sentinel;
         
         i32 max = models->view_set.max;
         View *view = models->view_set.views;
         for (i32 i = 0; i < max; ++i, ++view){
-            //dll_insert(&models->view_set.free_sentinel, view);
             view->next = models->view_set.free_sentinel.next;
             view->prev = &models->view_set.free_sentinel;
             models->view_set.free_sentinel.next = view;
@@ -234,15 +229,12 @@ App_Init_Sig(app_init){
     lifetime_allocator_init(tctx->allocator, &models->lifetime_allocator);
     dynamic_workspace_init(&models->lifetime_allocator, DynamicWorkspace_Global, 0, &models->dynamic_workspace);
     
-    // NOTE(allen): file setup
     working_set_init(models, &models->working_set);
     Mutex_Lock file_order_lock(models->working_set.mutex);
     
-    // NOTE(allen):
     global_history_init(&models->global_history);
     text_layout_init(tctx, &models->text_layouts);
     
-    // NOTE(allen): style setup
     {
         Scratch_Block scratch(tctx, arena);
         
@@ -259,24 +251,20 @@ App_Init_Sig(app_init){
         models->global_face_id = new_face->id;
     }
     
-    // NOTE(allen): title space
     models->has_new_title = true;
     models->title_capacity = KB(4);
     models->title_space = push_array(arena, char, models->title_capacity);
     block_copy(models->title_space, WINDOW_NAME, sizeof(WINDOW_NAME));
     
-    // NOTE(allen): miscellaneous init
     hot_directory_init(arena, &models->hot_directory, current_directory);
     child_process_container_init(tctx->allocator, &models->child_processes);
     models->period_wakeup_timer = system_wake_up_timer_create();
     
-    // NOTE(allen): custom layer init
     Application_Links app = {};
     app.tctx = tctx;
     app.cmd_context = models;
     custom_layer_init(&app);
     
-    // NOTE(allen): init baked in buffers
     File_Init init_files[] = {
         { str8_lit("*messages*"), &models->message_buffer , true , },
         { str8_lit("*scratch*") , &models->scratch_buffer , false, },
@@ -309,7 +297,6 @@ App_Init_Sig(app_init){
     
     models->begin_buffer = begin_buffer_func;
     
-    // NOTE(allen): setup first panel
     {
         Panel *panel = layout_initialize(arena, &models->layout);
         View *new_view = live_set_alloc_view(&models->lifetime_allocator, &models->view_set, panel);
@@ -326,22 +313,18 @@ App_Step_Sig(app_step){
     models->next_animate_delay = max_u32;
     models->animate_next_frame = false;
     
-    // NOTE(allen): per-frame update of models state
     begin_frame(target, &models->font_set);
     models->target = target;
     models->input = input;
     
-    // NOTE(allen): OS clipboard event handling
     if (input->clipboard.str != 0){
         co_send_core_event(tctx, models, CoreCode_NewClipboardContents, input->clipboard);
     }
     
-    // NOTE(allen): reorganizing panels on screen
     Vec2_i32 prev_dim = layout_get_root_size(&models->layout);
     Vec2_i32 current_dim = V2i32(target->width, target->height);
     layout_set_root_size(&models->layout, current_dim);
     
-    // NOTE(allen): update child processes
     f32 dt = input->dt;
     if (dt > 0){
         Temp_Memory_Block temp(scratch);
@@ -361,7 +344,7 @@ App_Step_Sig(app_step){
             Editing_File *file = child_process->out_file;
             CLI_Handles *cli = &child_process->cli;
             
-            // TODO(allen): do(call a 'child process updated hook' let that hook populate the buffer if it so chooses)
+            // TODO(allen): Call a hook so the custom layer can fill this buffer.
             
             b32 edited_file = false;
             u32 amount = 0;
@@ -393,7 +376,6 @@ App_Step_Sig(app_step){
         }
     }
     
-    // NOTE(allen): simulated events
     Input_List input_list = input->events;
     Input_Modifier_Set modifiers = system_get_keyboard_modifiers(scratch);
     if (input->mouse.press_l){
@@ -454,10 +436,8 @@ App_Step_Sig(app_step){
         push_input_event(scratch, &input_list, &event);
     }
     
-    // NOTE(allen): expose layout
     Layout *layout = &models->layout;
     
-    // NOTE(allen): mouse hover status
     Panel *mouse_panel = 0;
     Panel *divider_panel = 0;
     b32 mouse_in_margin = false;
@@ -485,7 +465,6 @@ App_Step_Sig(app_step){
         }
     }
     
-    // NOTE(allen): First frame initialization
     if (input->first_step){
         Temp_Memory_Block temp(scratch);
         
@@ -510,7 +489,7 @@ App_Step_Sig(app_step){
         event.core.file_names = file_names;
         co_send_event(tctx, models, &event);
         
-        // NOTE(allen): Actually do the buffer settings for the built ins now.
+        // Built-in buffers skip begin_buffer until startup.
         Buffer_Hook_Function *begin_buffer_func = models->begin_buffer;
         if (begin_buffer_func != 0){
             Application_Links app = {};
@@ -523,12 +502,10 @@ App_Step_Sig(app_step){
         }
     }
     
-    // NOTE(allen): consume event stream
     Input_Event_Node *input_node = input_list.first;
     Input_Event_Node *input_node_next = 0;
     for (;; input_node = input_node_next){
-        // NOTE(allen): first handle any events coming from the view command
-        // function queue
+        // Handle queued view commands before the next input event.
         Model_View_Command_Function cmd_func = models_pop_view_command_function(models);
         if (cmd_func.custom_func != 0){
             View *view = imp_get_view(models, cmd_func.view_id);
@@ -560,7 +537,6 @@ App_Step_Sig(app_step){
                 continue;
             }
             
-            // NOTE(allen): record to keyboard history
             if (simulated_input->kind == InputEventKind_KeyStroke ||
                 simulated_input->kind == InputEventKind_KeyRelease ||
                 simulated_input->kind == InputEventKind_TextInsert){
@@ -607,7 +583,6 @@ App_Step_Sig(app_step){
                     
                     case EventConsume_ClickChangeView:
                     {
-                        // NOTE(allen): run deactivate command
                         co_send_core_event(tctx, models, view, CoreCode_ClickDeactivateView);
                         
                         layout->active_panel = mouse_panel;
@@ -615,7 +590,6 @@ App_Step_Sig(app_step){
                         active_panel = mouse_panel;
                         view = active_panel->view;
                         
-                        // NOTE(allen): run activate command
                         co_send_core_event(tctx, models, view, CoreCode_ClickActivateView);
                         
                         event_was_handled = true;
@@ -665,7 +639,6 @@ App_Step_Sig(app_step){
     models->first_virtual_event = 0;
     models->last_virtual_event = 0;
     
-    // NOTE(allen): send panel size update
     if (models->layout.panel_state_dirty){
         models->layout.panel_state_dirty = false;
         if (models->buffer_viewer_update != 0){
@@ -676,7 +649,6 @@ App_Step_Sig(app_step){
         }
     }
     
-    // NOTE(allen): dt
     f32 literal_dt = 0.f;
     u64 now_usecond_stamp = system_now_time();
     if (!input->first_step){
@@ -702,7 +674,6 @@ App_Step_Sig(app_step){
         }
     }
     
-    // NOTE(allen): hook for files reloaded
     {
         Working_Set *working_set = &models->working_set;
         Assert(working_set->has_external_mod_sentinel.next != 0);
@@ -719,13 +690,11 @@ App_Step_Sig(app_step){
         }
     }
     
-    // NOTE(allen): if the exit signal has been sent, run the exit hook.
     if (!models->keep_playing || input->trying_to_kill){
         co_send_core_event(tctx, models, CoreCode_TryExit);
         models->keep_playing = true;
     }
     
-    // NOTE(allen): rendering
     {
         Frame_Info frame = {};
         frame.index = models->frame_counter;
@@ -766,8 +735,7 @@ App_Step_Sig(app_step){
         end_render_section(target);
     }
     
-    // TODO(allen): This is dumb. Let's rethink view cleanup strategy.
-    // NOTE(allen): wind down coroutines
+    // TODO(allen): Change the view cleanup path.
     for (;;){
         Model_Wind_Down_Co *node = models->wind_down_stack;
         if (node == 0){
@@ -796,22 +764,18 @@ App_Step_Sig(app_step){
     }
     
     
-    // NOTE(allen): flush the log
     log_flush(tctx, models);
     
-    // NOTE(allen): set the app_result
     Application_Step_Result app_result = {};
     app_result.mouse_cursor_type = APP_MOUSE_CURSOR_DEFAULT;
     app_result.lctrl_lalt_is_altgr = models->settings.lctrl_lalt_is_altgr;
     
-    // NOTE(allen): get new window title
     if (models->has_new_title){
         models->has_new_title = false;
         app_result.has_new_title = true;
         app_result.title_string = models->title_space;
     }
     
-    // NOTE(allen): get cursor type
     if (mouse_panel != 0 && !mouse_in_margin){
         app_result.mouse_cursor_type = APP_MOUSE_CURSOR_ARROW;
     }
@@ -832,20 +796,18 @@ App_Step_Sig(app_step){
     app_result.perform_kill = models->hard_exit;
     app_result.animating = models->animate_next_frame;
     if (models->animate_next_frame){
-        // NOTE(allen): Silence the timer, because we're going to do another frame right away anyways.
+        // The next frame is already scheduled. Do not wake on the timer.
         system_wake_up_timer_set(models->period_wakeup_timer, max_u32);
     }
     else{
-        // NOTE(allen): Set the timer's wakeup period, possibly to max_u32 thus effectively silencing it.
+        // Wake on the timer. max_u32 keeps the timer silent.
         system_wake_up_timer_set(models->period_wakeup_timer, models->next_animate_delay);
     }
     
-    // NOTE(allen): Update Frame to Frame States
     models->prev_p = input->mouse.p;
     models->animated_last_frame = app_result.animating;
     models->frame_counter += 1;
     
-    // end-of-app_step
     return(app_result);
 }
 

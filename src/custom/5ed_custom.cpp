@@ -1,6 +1,7 @@
 /*
-5ed_custom.cpp
-*/
+ * Binds the custom API table.
+ * scripts/test-check-structure.sh edits this file.
+ */
 
 // TOP
 

@@ -1,5 +1,5 @@
 /*
- * 5ed_profile_static_enable.cpp - Macro interface for self profiler.
+ * Macros for the self profiler.
  */
 
 // TOP

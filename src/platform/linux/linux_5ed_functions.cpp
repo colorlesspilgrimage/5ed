@@ -30,9 +30,8 @@ system_get_path(Arena* arena, System_Path_Code path_code){
         } break;
         
         case SystemPath_Binary: {
-            // linux-specific: binary path symlinked at /proc/self/exe
-            // PATH_MAX is probably good enough...
-            // read the 'readlink' manpage for some comedy about it being 'broken by design'.
+            // The binary path is the /proc/self/exe link.
+            // PATH_MAX is enough for this path.
             
             char* buf = push_array(arena, char, PATH_MAX);
             ssize_t n = readlink("/proc/self/exe", buf, PATH_MAX);
