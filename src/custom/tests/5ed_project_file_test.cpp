@@ -172,6 +172,108 @@ test_hostile_project(Arena *arena, String8 dir){
     return(ok);
 }
 
+function Config*
+test_parse_text(Arena *arena, String8 data){
+    Token_List list = lex_full_input_cpp(arena, data);
+    Token_Array array = token_array_from_list(arena, &list);
+    Config_Parser ctx = def_config_parser_init(arena, str8_lit("limits"), data, array);
+    return(def_config_parser_top(&ctx));
+}
+
+// A hostile project.5ed must not use all the stack or memory.
+function b32
+test_config_limits(Arena *arena){
+    b32 ok = true;
+    
+    // Deep compound nesting is a parse error, not a stack overflow.
+    i32 depth = 200000;
+    u8 *deep = push_array(arena, u8, depth*2 + 16);
+    u64 n = 0;
+    block_copy(deep, "x = ", 4);
+    n = 4;
+    for (i32 i = 0; i < depth; i += 1){
+        deep[n] = '{';
+        n += 1;
+    }
+    for (i32 i = 0; i < depth; i += 1){
+        deep[n] = '}';
+        n += 1;
+    }
+    deep[n] = ';';
+    n += 1;
+    Config *config = test_parse_text(arena, SCu8(deep, n));
+    if (config == 0 || config->errors.count == 0){
+        printf("FAIL: deep nesting gave no parse error\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: deep nesting is a parse error\n");
+    }
+    
+    // Nesting at the limit still parses.
+    n = 0;
+    block_copy(deep, "x = ", 4);
+    n = 4;
+    for (i32 i = 0; i < config_parser_max_depth; i += 1){
+        deep[n] = '{';
+        n += 1;
+    }
+    deep[n] = '1';
+    n += 1;
+    for (i32 i = 0; i < config_parser_max_depth; i += 1){
+        deep[n] = '}';
+        n += 1;
+    }
+    deep[n] = ';';
+    n += 1;
+    config = test_parse_text(arena, SCu8(deep, n));
+    if (config == 0 || config->errors.count != 0){
+        printf("FAIL: nesting at the limit gave a parse error\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: nesting at the limit parses\n");
+    }
+    
+    // A compound that refers to itself must not recurse without end.
+    char *cycles[] = {
+        "version(2);\na = { a };\n",
+        "version(2);\na = { b, b };\nb = { a, a };\n",
+    };
+    for (i32 i = 0; i < ArrayCount(cycles); i += 1){
+        config = test_parse_text(arena, SCu8(cycles[i]));
+        b32 complete = true;
+        if (config == 0 || config->errors.count != 0){
+            printf("FAIL: cycle %d parse\n", i);
+            ok = false;
+            continue;
+        }
+        def_fill_var_from_config(arena, vars_get_root(), vars_save_string_lit("limits_test"), config, &complete);
+        if (complete){
+            printf("FAIL: cycle %d dump was not stopped\n", i);
+            ok = false;
+        }
+        else{
+            printf("PASS: cycle %d dump is stopped\n", i);
+        }
+    }
+    
+    // A normal file dumps completely.
+    config = test_parse_text(arena, str8_lit("version(2);\nb = 1;\na = { b, { .c = \"x\" } };\n"));
+    b32 complete = false;
+    if (config != 0){
+        def_fill_var_from_config(arena, vars_get_root(), vars_save_string_lit("limits_test"), config, &complete);
+    }
+    if (!complete){
+        printf("FAIL: normal dump was stopped\n");
+        ok = false;
+    }
+    else{
+        printf("PASS: normal dump is complete\n");
+    }
+    return(ok);
+}
+
 function b32
 test_command_table(void){
     b32 ok = true;
@@ -261,6 +363,7 @@ main(int argc, char **argv){
     String8 project = push_u8_stringf(&arena, "%.*s/project.5ed", string_expand(dir));
     ok = test_parse_file(&arena, project) && ok;
     ok = test_hostile_project(&arena, dir) && ok;
+    ok = test_config_limits(&arena) && ok;
     for (int i = 2; i < argc; i += 1){
         ok = test_parse_file(&arena, SCu8(argv[i])) && ok;
     }

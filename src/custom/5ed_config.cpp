@@ -400,8 +400,14 @@ def_config_parser_rvalue(Config_Parser *ctx){
         rvalue->lvalue = l;
     }
     else if (def_config_parser_recognize_cpp_kind(ctx, TokenCppKind_BraceOp)){
+        if (ctx->depth >= config_parser_max_depth){
+            def_config_parser_push_error_here(ctx, "compound nesting is too deep");
+            return(0);
+        }
         def_config_parser_inc(ctx);
+        ctx->depth += 1;
         Config_Compound *compound = def_config_parser_compound(ctx);
+        ctx->depth -= 1;
         require(compound != 0);
         rvalue = push_array_zero(ctx->arena, Config_RValue, 1);
         rvalue->type = ConfigRValueType_Compound;
@@ -578,9 +584,18 @@ def_config_parser_recover(Config_Parser *ctx){
 function Config_Get_Result
 config_var(Config *config, String_Const_u8 var_name, i32 subscript);
 
-function void
-def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst, String_ID l_value, Config_RValue *r){
-    Scratch_Block scratch(app);
+// Write r into dst as l_value.
+// A compound can refer to itself through an l-value (a = { a };).
+// Stop at config_parser_max_depth or after config_dump_max_count values.
+// Return false when a limit stops the dump.
+function b32
+def_var_dump_rvalue(Arena *scratch, Config *config, Variable_Handle dst, String_ID l_value, Config_RValue *r, i32 depth, i32 *count){
+    if (depth > config_parser_max_depth || *count >= config_dump_max_count){
+        return(false);
+    }
+    *count += 1;
+    Temp_Memory_Block temp(scratch);
+    b32 result = true;
     
     b32 *boolean = 0;
     i32 *integer = 0;
@@ -699,16 +714,23 @@ def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst,
             if (sub_l_value != 0){
                 Config_RValue *r = node->r;
                 if (r != 0){
-                    def_var_dump_rvalue(app, config, sub_var, sub_l_value, r);
+                    if (!def_var_dump_rvalue(scratch, config, sub_var, sub_l_value, r, depth + 1, count)){
+                        result = false;
+                        break;
+                    }
                 }
             }
         }
     }
+    return(result);
 }
 
+// Write config into parent as key.
+// Set *complete to false when a limit of def_var_dump_rvalue stops the dump.
 function Variable_Handle
-def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_ID key, Config *config){
+def_fill_var_from_config(Arena *scratch, Variable_Handle parent, String_ID key, Config *config, b32 *complete){
     Variable_Handle result = vars_get_nil();
+    *complete = true;
     
     if (key != 0){
         String_ID file_name_id = vars_save_string(config->file_name);
@@ -716,7 +738,8 @@ def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_
         
         Variable_Handle var = result;
         
-        Scratch_Block scratch(app);
+        Temp_Memory_Block temp(scratch);
+        i32 count = 0;
         
         if (config->version != 0){
             String_ID version_key = vars_save_string(string_u8_litexpr("version"));
@@ -740,12 +763,27 @@ def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_
             if (l_value != 0){
                 Config_RValue *r = node->r;
                 if (r != 0){
-                    def_var_dump_rvalue(app, config, var, l_value, r);
+                    if (!def_var_dump_rvalue(scratch, config, var, l_value, r, 0, &count)){
+                        *complete = false;
+                        break;
+                    }
                 }
             }
         }
     }
     
+    return(result);
+}
+
+function Variable_Handle
+def_fill_var_from_config(Application_Links *app, Variable_Handle parent, String_ID key, Config *config){
+    Scratch_Block scratch(app);
+    b32 complete = true;
+    Variable_Handle result = def_fill_var_from_config(scratch, parent, key, config, &complete);
+    if (!complete){
+        String8 msg = push_u8_stringf(scratch, "%.*s: the values are too deep or too many; the rest is not loaded\n", string_expand(config->file_name));
+        print_message(app, msg);
+    }
     return(result);
 }
 
@@ -1361,7 +1399,7 @@ CUSTOM_COMMAND_SIG(go_to_user_directory)
     String8 config_dir = system_get_path(scratch, SystemPath_ConfigDirectory);
     if (config_dir.size > 0){
         String8 quoted = prj_shell_quote(scratch, config_dir);
-        String8 cmd = push_u8_stringf(scratch, "mkdir -p %.*s", string_expand(quoted));
+        String8 cmd = push_u8_stringf(scratch, "mkdir -p -- %.*s", string_expand(quoted));
         exec_system_command(app, 0, buffer_identifier(0), hot, cmd, 0);
         set_hot_directory(app, config_dir);
     }

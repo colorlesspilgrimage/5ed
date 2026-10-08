@@ -475,7 +475,12 @@ prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_p
     String8 file_name = push_u8_stringf(scratch, "%.*s/%.*s.sh",
                                         string_expand(script_path),
                                         string_expand(script_file));
-    String8 od_q = prj_shell_quote(scratch, output_dir);
+    // cd reads the operand "-" as $OLDPWD, also after "--".
+    String8 od_path = output_dir;
+    if (string_match(output_dir, string_u8_litexpr("-"))){
+        od_path = string_u8_litexpr("./-");
+    }
+    String8 od_q = prj_shell_quote(scratch, od_path);
     String8 cf_q = prj_shell_quote(scratch, code_file);
     String8 bf_q = prj_shell_quote(scratch, binary_file);
     
@@ -484,7 +489,7 @@ prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_p
         fprintf(sh_script, "#!/bin/bash\n\n");
         fprintf(sh_script, "code=\"$PWD\"\n");
         fprintf(sh_script, "opts=%.*s\n", string_expand(opts));
-        fprintf(sh_script, "cd %.*s > /dev/null\n", string_expand(od_q));
+        fprintf(sh_script, "cd -- %.*s > /dev/null\n", string_expand(od_q));
         fprintf(sh_script, "%.*s $opts \"$code\"/%.*s -o %.*s\n",
                 string_expand(compiler), string_expand(cf_q), string_expand(bf_q));
         fprintf(sh_script, "cd \"$code\" > /dev/null\n");

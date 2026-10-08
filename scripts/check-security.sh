@@ -156,6 +156,18 @@ else
         quote_ok=0
     fi
 
+    # An output dir that starts with "-" is a directory, not a cd option.
+    for od_name in "-P" "-"; do
+        case_dir="$work/dash$od_name"
+        mkdir -p "$case_dir/$od_name"
+        "$work/prj_harness" "$case_dir" "sh -c pwd" main.cpp "$od_name" app > /dev/null
+        got=$(cd "$case_dir" && bash build.sh 2>&1)
+        if [ "$got" != "$case_dir/$od_name" ]; then
+            echo "FAIL: build.sh did not cd into the output dir '$od_name' (got '$got')"
+            quote_ok=0
+        fi
+    done
+
     case_dir="$work/control"
     mkdir -p "$case_dir"
     nl_name=$(printf 'a\nb')

@@ -11,9 +11,10 @@
 global char *lnx_override_user_directory = 0;
 
 // Return "<dir>/5ed/".
-// Use the env value when it is set, not empty, and starts with /.
-// Otherwise use $HOME and the suffix.
-// Return an empty string when HOME is not set.
+// Use the env value when it starts with /.
+// Otherwise use $HOME and the suffix when $HOME starts with /.
+// Return an empty string when no absolute directory is set.
+// An empty or relative HOME must not give a path under / or the cwd.
 function String_Const_u8
 lnx_xdg_dir(Arena *arena, const char *env_name, const char *home_suffix){
     String_Const_u8 result = {};
@@ -23,7 +24,7 @@ lnx_xdg_dir(Arena *arena, const char *env_name, const char *home_suffix){
     }
     else{
         char *home_cstr = getenv("HOME");
-        if (home_cstr != 0){
+        if (home_cstr != 0 && home_cstr[0] == '/'){
             result = push_u8_stringf(arena, "%s/%s/5ed/", home_cstr, home_suffix);
         }
     }
@@ -67,7 +68,15 @@ system_get_path(Arena* arena, System_Path_Code path_code){
         case SystemPath_ConfigDirectory:
         {
             if (lnx_override_user_directory != 0){
-                result = SCu8((u8*)lnx_override_user_directory);
+                // The other directories end with /. The callers add a
+                // name directly after the directory, so add a / here too.
+                String_Const_u8 dir = SCu8((u8*)lnx_override_user_directory);
+                if (dir.size > 0 && dir.str[dir.size - 1] != '/'){
+                    result = push_u8_stringf(arena, "%.*s/", string_expand(dir));
+                }
+                else{
+                    result = dir;
+                }
             }
             else{
                 result = lnx_xdg_dir(arena, "XDG_CONFIG_HOME", ".config");
