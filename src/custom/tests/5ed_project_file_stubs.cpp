@@ -1,9 +1,10 @@
 /*
- * Stubs for the project-file test.
- * The test includes the custom layer and does not link the platform layer.
+ * Stubs for the project-file test and the command line test.
+ * These tests do not link the platform layer.
  */
 // TOP
 #include "base/5ed_base.h"
+#include <stdlib.h>
 
 void system_error_box(char* msg)
 {}
@@ -143,14 +144,15 @@ void system_condition_variable_signal(System_Condition_Variable cv)
 void system_condition_variable_free(System_Condition_Variable cv)
 {}
 
+// The command line test makes arenas. These two stubs must give real memory.
 void* system_memory_allocate(u64 size, String_Const_u8 location)
-{ return {}; }
+{ return(calloc(1, size)); }
 
 b32 system_memory_set_protection(void* ptr, u64 size, u32 flags)
 { return {}; }
 
 void system_memory_free(void* ptr, u64 size)
-{}
+{ free(ptr); }
 
 Memory_Annotation system_memory_annotation(Arena* arena)
 { return {}; }

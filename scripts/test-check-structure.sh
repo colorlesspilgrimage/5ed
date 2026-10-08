@@ -60,9 +60,26 @@ for build in "$@"; do
         fail_test "parallel runs ($build) rc=$rc1,$rc2 left: $(ls -A "$WORK/tmp")"
     fi
     rm -rf "$WORK/tmp"
+
+    # 4. An old build folder has a core library, a custom library and their
+    # objects. A new configure removes them, and the checks then pass.
+    stale_dir=$build/CMakeFiles/5ed_app.dir
+    mkdir -p "$stale_dir"
+    cp "$build/CMakeFiles/5ed_base.dir/src/base/5ed_stringf.cpp.o" "$stale_dir/stale.o"
+    touch "$build/5ed_app.so" "$build/custom_5ed.so"
+    if cmake "$build" > "$WORK/cfg.txt" 2>&1 &&
+       [ ! -e "$stale_dir" ] && [ ! -e "$build/5ed_app.so" ] && [ ! -e "$build/custom_5ed.so" ] &&
+       "$CHECK" "$ROOT" "$build" > "$WORK/out.txt"; then
+        pass "old libraries removed ($build)"
+    else
+        fail_test "old libraries removed ($build)"
+        cat "$WORK/cfg.txt" "$WORK/out.txt" 2>/dev/null
+    fi
+    rm -rf "$stale_dir"
+    rm -f "$build/5ed_app.so" "$build/custom_5ed.so"
 done
 
-# 4. Bad arguments give a FAIL line and a non-zero exit.
+# 5. Bad arguments give a FAIL line and a non-zero exit.
 if "$CHECK" > "$WORK/out.txt" 2>&1; then
     fail_test "no arguments"
 elif grep -q "^FAIL: usage" "$WORK/out.txt"; then
@@ -78,7 +95,7 @@ else
     fail_test "missing source root"
 fi
 
-# 5. The checks find a bad include in a copy of the tree.
+# 6. The checks find a bad include in a copy of the tree.
 copy=$WORK/copy
 mkdir -p "$copy"
 cp -r "$ROOT/src" "$ROOT/scripts" "$ROOT/ship_files" "$ROOT/CMakeLists.txt" "$ROOT/.gitignore" "$copy/"

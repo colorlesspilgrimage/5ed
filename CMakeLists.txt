@@ -25,6 +25,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # next to that executable.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Old builds made a core library and a custom library. The editor does not use
+# them now. Remove them and their object folders from an old build folder.
+foreach(old_library 5ed_app custom_5ed)
+    file(REMOVE ${CMAKE_BINARY_DIR}/${old_library}.so)
+    file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/CMakeFiles/${old_library}.dir)
+endforeach()
+
 find_package(Threads REQUIRED)
 find_package(X11 REQUIRED COMPONENTS Xfixes)
 find_package(OpenGL REQUIRED)
@@ -201,6 +208,16 @@ add_custom_target(check-project-file
     COMMAND test_project_file ${CMAKE_BINARY_DIR}/test-project
             ${PROJECT_SOURCE_DIR}/project.5ed ${PROJECT_SOURCE_DIR}/ship_files/config.5ed
     DEPENDS test_project_file
+    VERBATIM)
+
+# Parses command lines with the real core parser. Not part of ALL.
+add_executable(test_command_line EXCLUDE_FROM_ALL
+    src/core/tests/5ed_command_line_test.cpp
+    src/custom/tests/5ed_project_file_stubs.cpp)
+target_link_libraries(test_command_line PRIVATE 5ed_common 5ed_base 5ed_core)
+add_custom_target(check-command-line
+    COMMAND test_command_line
+    DEPENDS test_command_line
     VERBATIM)
 
 # Security regression checks. See scripts/check-security.sh.

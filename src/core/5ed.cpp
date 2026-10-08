@@ -51,6 +51,10 @@ init_command_line_settings(App_Settings *settings, Plat_Settings *plat_settings,
                                 case 'h': action = CLAct_FontUseHinting; --i; break;
                                 case 'U': action = CLAct_UserDirectory; break;
                                 
+                                // The removed options -d and -D took a library path.
+                                // Skip that path. Do not open it as a file.
+                                case 'd': case 'D': action = CLAct_SkipArgument; break;
+                                
                                 case 'L': action = CLAct_Nothing; break;
                                 //case 'L': enables log, parsed before this is called (because I'm a dumbass)
                             }
@@ -128,6 +132,11 @@ init_command_line_settings(App_Settings *settings, Plat_Settings *plat_settings,
                     {
                         plat_settings->use_hinting = true;
                         settings->use_hinting = plat_settings->use_hinting;
+                        action = CLAct_Nothing;
+                    }break;
+                    
+                    case CLAct_SkipArgument:
+                    {
                         action = CLAct_Nothing;
                     }break;
                     
