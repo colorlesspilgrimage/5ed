@@ -91,7 +91,9 @@ Items are roughly in the order intended. Each should leave the tree building and
 - Typed text in `build.sh` is wrapped in POSIX single quotes.
 - A `'` in typed text becomes `'\''`.
 - `"$code"` and `"$PWD"` are quoted.
-- Typed text in `project.5ed` escapes `\` and `"`.
+- `build.sh` uses `cd --`. An output dir that starts with `-` is not a `cd` option.
+- `.5ed` string values escape `\`, `"`, newline, tab and NUL.
+- `project_reprint` uses the same escapes. A value then parses back to the same bytes.
 - A shell command is shell-quoted, then escaped for the string literal.
 - A control character is refused. No file is written.
 - A script name that holds `/` is refused.
