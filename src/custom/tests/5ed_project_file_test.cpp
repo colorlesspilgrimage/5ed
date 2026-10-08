@@ -51,7 +51,7 @@ function b32
 test_command_table(void){
     b32 ok = true;
     if (command_table_count <= 200){
-        printf("FAIL: command table count %d\n", command_table_count);
+        printf("FAIL: command table count %d\n", (i32)command_table_count);
         ok = false;
     }
     for (i32 i = 0; i < command_table_count; i += 1){
