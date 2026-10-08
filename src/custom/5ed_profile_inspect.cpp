@@ -937,4 +937,26 @@ CUSTOM_DOC("Inspect all currently collected profiling information in 5ed's self 
     profile_set_enabled(list, true, ProfileEnable_InspectBit);
 }
 
+CUSTOM_COMMAND_SIG(profile_enable)
+CUSTOM_DOC("Allow 5ed's self profiler to gather new profiling information.")
+{
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_set_enabled(list, true, ProfileEnable_UserBit);
+}
+
+CUSTOM_COMMAND_SIG(profile_disable)
+CUSTOM_DOC("Prevent 5ed's self profiler from gathering new profiling information.")
+{
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_set_enabled(list, false, ProfileEnable_UserBit);
+}
+
+CUSTOM_COMMAND_SIG(profile_clear)
+CUSTOM_DOC("Clear all profiling information from 5ed's self profiler.")
+{
+    Profile_Global_List *list = get_core_profile_list(app);
+    profile_clear(list);
+}
+
+
 // BOTTOM

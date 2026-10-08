@@ -22,7 +22,7 @@
 #include "base/5ed_doc_content_types.h"
 #include "core/docs/5ed_doc_helper.h"
 
-#include "base/generated/lexer_cpp.cpp"
+#include "base/5ed_lexer_cpp_api.h"
 #include "core/5ed_api_definition.cpp"
 #include "core/5ed_api_parser.cpp"
 #include "core/docs/5ed_doc_helper.cpp"

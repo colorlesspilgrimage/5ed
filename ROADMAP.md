@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port, Linux-only cleanup (item 1), base layer and source layout (item 2). See `git log`.
+Status: 5ed 0.1.0 builds and runs on x86-64 Linux (X11/GLX, GCC, CMake). Done so far: upstream import, Linux-only, rebrand, CMake port, Linux-only cleanup (item 1), base layer and source layout (item 2), one executable (item 3). See `git log`.
 
 Items are roughly in the order intended. Each should leave the tree building and the editor launching.
 
@@ -9,14 +9,24 @@ Items are roughly in the order intended. Each should leave the tree building and
 ## 2. Unify the base layer (done)
 
 
-## 3. Remove the `.so` split
+## 3. Remove the `.so` split (done)
 
-- `5ed_app.so` and `custom_5ed.so` are each `dlopen`ed once at startup and never unloaded or reloaded (`platform_linux/linux_5ed.cpp`), so there is no hot reload to preserve.
-- The files listed in `CMakeLists.txt` as per-target stay compiled once per binary. Merge them here.
-- Link core and custom layer into the main executable. Keep the `custom_api` / `system_api` vtable boundary at first and remove it afterwards if nothing needs it.
-- Remove the custom-DLL command line option (`CLAct_CustomDLL` in `5ed.cpp`) and the version handshake (`get_version`, `init_apis`).
-- Decide on the user customisation story: edit `custom/` and rebuild, or keep a plugin path.
-- Once core and custom are one target, try IPO/LTO for Release again and measure it. It is off now because it triggered OpenGL function-pointer warnings, so `lib5ed_base.a` helpers are not inlined across the library. If the warnings remain, finish it in item 6.
+- The build writes one executable, `build/5ed`. It does not write `5ed_app.so` or `custom_5ed.so`.
+- Core and custom stay two translation units. CMake links both object libraries into `5ed`.
+- The `custom_api` vtable stays. Item 4 decides about the API generators.
+- The `system_api` vtable is gone. Platform functions have external linkage. Callers use them directly.
+- The `font_api` and `graphics_api` vtables stay. Item 4 or item 6 may remove them.
+- Customisation is an edit of `src/custom/` and a rebuild. There is no plugin path.
+- `app_get_functions` stays. The platform calls it directly.
+- `system_load_library`, `system_get_proc`, and `system_release_library` stay unused. Item 4 decides.
+- IPO stays off. The Release IPO link printed 57 warnings and still produced `main`.
+- Each warning has this form: `warning: type of symbol 'glAttachShader' changed from 2 to 1`.
+- The other symbols are the `gl*` names loaded by `GL_FUNC` in `src/platform/opengl/5ed_opengl_funcs.h`.
+- Old Release build time was 22.2 s. The three files were 1524888, 2938320 and 3869152 bytes.
+- New Release build time with no IPO was 20.1 s. `build/5ed` was 5586040 bytes. `size` text was 1171119.
+- Release IPO build time was 11.5 s. The file was 5923504 bytes. `size` text was 1072402. Warnings: 57.
+- No display was available, so launch time was not measured.
+- `CMAKE_POSITION_INDEPENDENT_CODE` stays on.
 
 ## 4. Simplify generated code
 
@@ -38,7 +48,7 @@ Items are roughly in the order intended. Each should leave the tree building and
 
 - Wayland-native window (currently X11 via XWayland). Needs an alternative to GLX and XIM.
 - Replace the OpenGL 2.1 compatibility context and `glext` function loading.
-- When `glext` loading is replaced, remove the OpenGL function-pointer warnings so IPO can be on for Release (see item 3).
+- When `glext` loading is replaced, remove the OpenGL function-pointer warnings so IPO can be on for Release (see item 3). The 2026-10-07 trial kept IPO off. The link printed 57 warnings. Each warning has this form: `warning: type of symbol 'glAttachShader' changed from 2 to 1`. The names are the `GL_FUNC` symbols in `src/platform/opengl/5ed_opengl_funcs.h`.
 - Remove unused system dependencies (`fontconfig` already dropped from the link line).
 - Audio (`platform_linux/linux_5ed_audio.cpp`, ALSA via `dlopen`): keep or remove.
 

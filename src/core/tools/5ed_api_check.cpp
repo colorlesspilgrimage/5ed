@@ -19,8 +19,8 @@
 #include "base/5ed_token.h"
 #include "base/generated/lexer_cpp.h"
 #include "core/5ed_api_definition.h"
+#include "base/5ed_lexer_cpp_api.h"
 
-#include "base/generated/lexer_cpp.cpp"
 #include "core/5ed_api_definition.cpp"
 #include "core/5ed_api_parser.cpp"
 

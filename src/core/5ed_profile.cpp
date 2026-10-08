@@ -31,7 +31,7 @@ prof__get_thread(Profile_Global_List *list, i32 thread_id){
     return(result);
 }
 
-function void
+void
 profile_clear(Profile_Global_List *list){
     Mutex_Lock lock(list->mutex);
     for (Arena_Node *node = list->first_arena;
@@ -81,16 +81,15 @@ profile_thread_flush(Thread_Context *tctx, Profile_Global_List *list){
     }
 }
 
-function void
+void
 profile_thread_set_name(Thread_Context *tctx, Profile_Global_List *list, String_Const_u8 name){
     Mutex_Lock lock(list->mutex);
     Profile_Thread* thread = prof__get_thread(list, system_thread_get_id());
     thread->name = name;
 }
 
-#define ProfileThreadName(tctx,list,name) profile_thread_set_name((tctx), (list), (name))
 
-function void
+void
 profile_set_enabled(Profile_Global_List *list, b32 value, Profile_Enable_Flag flag){
     Mutex_Lock lock(list->mutex);
     if (value){
@@ -207,27 +206,5 @@ Profile_Scope_Block::close_now(){
     }
 }
 
-////////////////////////////////
-
-CUSTOM_COMMAND_SIG(profile_enable)
-CUSTOM_DOC("Allow 5ed's self profiler to gather new profiling information.")
-{
-    Profile_Global_List *list = get_core_profile_list(app);
-    profile_set_enabled(list, true, ProfileEnable_UserBit);
-}
-
-CUSTOM_COMMAND_SIG(profile_disable)
-CUSTOM_DOC("Prevent 5ed's self profiler from gathering new profiling information.")
-{
-    Profile_Global_List *list = get_core_profile_list(app);
-    profile_set_enabled(list, false, ProfileEnable_UserBit);
-}
-
-CUSTOM_COMMAND_SIG(profile_clear)
-CUSTOM_DOC("Clear all profiling information from 5ed's self profiler.")
-{
-    Profile_Global_List *list = get_core_profile_list(app);
-    profile_clear(list);
-}
 
 // BOTTOM

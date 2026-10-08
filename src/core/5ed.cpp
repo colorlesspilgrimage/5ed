@@ -14,7 +14,6 @@ init_command_line_settings(App_Settings *settings, Plat_Settings *plat_settings,
     char *arg = 0;
     Command_Line_Mode mode = CLMode_App;
     Command_Line_Action action = CLAct_Nothing;
-    b32 strict = false;
     
     settings->init_files_max = ArrayCount(settings->init_files);
     for (i32 i = 1; i <= argc; ++i){
@@ -42,8 +41,6 @@ init_command_line_settings(App_Settings *settings, Plat_Settings *plat_settings,
                         if (arg[0] == '-'){
                             action = CLAct_Ignore;
                             switch (arg[1]){
-                                case 'd': action = CLAct_CustomDLL; strict = false; break;
-                                case 'D': action = CLAct_CustomDLL; strict = true; break;
                                 
                                 case 'w': action = CLAct_WindowSize; break;
                                 case 'W': action = CLAct_WindowMaximize; break;
@@ -66,14 +63,6 @@ init_command_line_settings(App_Settings *settings, Plat_Settings *plat_settings,
                         }
                     }break;
                     
-                    case CLAct_CustomDLL:
-                    {
-                        plat_settings->custom_dll_is_strict = (b8)strict;
-                        if (i < argc){
-                            plat_settings->custom_dll = argv[i];
-                        }
-                        action = CLAct_Nothing;
-                    }break;
                     
                     case CLAct_WindowSize:
                     {
@@ -176,8 +165,7 @@ models_init(void){
 }
 
 internal void
-app_load_vtables(API_VTable_system *vtable_system, API_VTable_font *vtable_font, API_VTable_graphics *vtable_graphics){
-    system_api_read_vtable(vtable_system);
+app_load_vtables(API_VTable_font *vtable_font, API_VTable_graphics *vtable_graphics){
     font_api_read_vtable(vtable_font);
     graphics_api_read_vtable(vtable_graphics);
 }
@@ -205,7 +193,6 @@ App_Init_Sig(app_init){
     models->keep_playing = true;
     models->hard_exit = false;
     
-    models->config_api = api;
     models->virtual_event_arena = make_arena_system();
     
     profile_init(&models->profile_list);
@@ -214,10 +201,7 @@ App_Init_Sig(app_init){
     
     API_VTable_custom custom_vtable = {};
     custom_api_fill_vtable(&custom_vtable);
-    API_VTable_system system_vtable = {};
-    system_api_fill_vtable(&system_vtable);
-    Custom_Layer_Init_Type *custom_init = api.init_apis(&custom_vtable, &system_vtable);
-    Assert(custom_init != 0);
+    custom_layer_bind_api(&custom_vtable);
     
     // NOTE(allen): coroutines
     coroutine_system_init(&models->coroutines);
@@ -290,7 +274,7 @@ App_Init_Sig(app_init){
     Application_Links app = {};
     app.tctx = tctx;
     app.cmd_context = models;
-    custom_init(&app);
+    custom_layer_init(&app);
     
     // NOTE(allen): init baked in buffers
     File_Init init_files[] = {

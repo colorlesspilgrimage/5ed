@@ -327,5 +327,10 @@ get_api_group(void){
     return(GeneratedGroup_Custom);
 }
 
+function API_Generation_Flag
+get_api_flags(void){
+    return(APIGeneration_NoVTable);
+}
+
 // BOTTOM
 

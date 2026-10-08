@@ -16,7 +16,6 @@
 #define frame_useconds (Million(1) / FPS)
 #define frame_nseconds (Billion(1) / FPS)
 #define SLASH '/'
-#define DLL "so"
 
 #include "base/5ed_base_types.h"
 #include "base/5ed_stringf.h"
@@ -36,7 +35,6 @@
 #include "base/5ed_system_types.h"
 #include "core/5ed_font_interface.h"
 
-#define STATIC_LINK_API
 #include "base/generated/system_api.h"
 
 #define STATIC_LINK_API
@@ -47,19 +45,12 @@
 
 #include "core/5ed_font_set.h"
 #include "core/5ed_render_target.h"
-// Per-target API-bound files. See CMakeLists.txt.
-#include "base/per_target/5ed_search_list.h"
 #include "core/5ed.h"
 
-#include "base/generated/system_api.cpp"
 #include "base/generated/graphics_api.cpp"
 #include "base/generated/font_api.cpp"
 
 
-#include "base/per_target/5ed_system_allocator.cpp"
-
-#include "core/5ed_font_set.cpp"
-#include "base/per_target/5ed_search_list.cpp"
 #include "platform/5ed_font_provider_freetype.h"
 #include "platform/5ed_font_provider_freetype.cpp"
 
@@ -1331,13 +1322,12 @@ linux_clipboard_recv(XSelectionEvent* ev) {
     }
 }
 
-internal
 system_get_clipboard_sig(){
     // TODO(inso): index?
     return(push_string_copy(arena, linuxvars.clipboard_contents));
 }
 
-internal void
+void
 system_post_clipboard(String_Const_u8 str, i32 index){
     // TODO(inso): index?
     //LINUX_FN_DEBUG("%.*s", string_expand(str));
@@ -1346,13 +1336,13 @@ system_post_clipboard(String_Const_u8 str, i32 index){
     XSetSelectionOwner(linuxvars.dpy, linuxvars.atom_CLIPBOARD, linuxvars.win, CurrentTime);
 }
 
-internal void
+void
 system_set_clipboard_catch_all(b32 enabled){
     LINUX_FN_DEBUG("%d", enabled);
     linuxvars.clipboard_catch_all = !!enabled;
 }
 
-internal b32
+b32
 system_get_clipboard_catch_all(void){
     return linuxvars.clipboard_catch_all;
 }
@@ -1765,8 +1755,6 @@ main(int argc, char **argv){
         thread_ctx_init(&linuxvars.tctx, ThreadKind_Main, alloc, alloc);
     }
     
-    API_VTable_system system_vtable = {};
-    system_api_fill_vtable(&system_vtable);
     
     API_VTable_graphics graphics_vtable = {};
     graphics_api_fill_vtable(&graphics_vtable);
@@ -1790,34 +1778,10 @@ main(int argc, char **argv){
     
     linuxvars.clipboard_catch_all = false;
     
-    // NOTE(allen): load core
-    System_Library core_library = {};
-    App_Functions app = {};
-    {
-        App_Get_Functions *get_funcs = 0;
-        Scratch_Block scratch(&linuxvars.tctx);
-        List_String_Const_u8 search_list = {};
-        def_search_list_add_system_path(scratch, &search_list, SystemPath_Binary);
-        
-        String_Const_u8 core_path = def_search_get_full_path(scratch, &search_list, SCu8("5ed_app.so"));
-        if (system_load_library(scratch, core_path, &core_library)){
-            get_funcs = (App_Get_Functions*)system_get_proc(core_library, "app_get_functions");
-            if (get_funcs != 0){
-                app = get_funcs();
-            }
-            else{
-                char msg[] = "Failed to get application code from '5ed_app.so'.";
-                system_error_box(msg);
-            }
-        }
-        else{
-            char msg[] = "Could not load '5ed_app.so'. This file should be in the same directory as the main '5ed' executable.";
-            system_error_box(msg);
-        }
-    }
+    App_Functions app = app_get_functions();
     
-    // NOTE(allen): send system vtable to core
-    app.load_vtables(&system_vtable, &font_vtable, &graphics_vtable);
+    // NOTE(allen): send font and graphics vtables to core
+    app.load_vtables(&font_vtable, &graphics_vtable);
     // get_logger calls log_init which is needed.
     //app.get_logger();
     linuxvars.log_string = app.get_logger();
@@ -1851,61 +1815,6 @@ main(int argc, char **argv){
         lnx_override_user_directory = plat_settings.user_directory;
     }
     
-    // NOTE(allen): load custom layer
-    System_Library custom_library = {};
-    Custom_API custom = {};
-    {
-        char custom_not_found_msg[] = "Did not find a library for the custom layer.";
-        char custom_fail_load_msg[] = "Failed to load custom code due to missing version information.  Try rebuilding with buildsuper.";
-        char custom_fail_version_msg[] = "Failed to load custom code due to a version mismatch.  Try rebuilding with buildsuper.";
-        char custom_fail_init_apis[] = "Failed to load custom code due to missing 'init_apis' symbol.  Try rebuilding with buildsuper";
-        
-        Scratch_Block scratch(&linuxvars.tctx);
-        String_Const_u8 default_file_name = string_u8_litexpr("custom_5ed.so");
-        List_String_Const_u8 search_list = {};
-        def_search_list_add_system_path(scratch, &search_list, SystemPath_UserDirectory);
-        def_search_list_add_system_path(scratch, &search_list, SystemPath_Binary);
-        String_Const_u8 custom_file_names[2] = {};
-        i32 custom_file_count = 1;
-        if (plat_settings.custom_dll != 0){
-            custom_file_names[0] = SCu8(plat_settings.custom_dll);
-            if (!plat_settings.custom_dll_is_strict){
-                custom_file_names[1] = default_file_name;
-                custom_file_count += 1;
-            }
-        }
-        else{
-            custom_file_names[0] = default_file_name;
-        }
-        String_Const_u8 custom_file_name = {};
-        for (i32 i = 0; i < custom_file_count; i += 1){
-            custom_file_name = def_search_get_full_path(scratch, &search_list, custom_file_names[i]);
-            if (custom_file_name.size > 0){
-                break;
-            }
-        }
-        b32 has_library = false;
-        if (custom_file_name.size > 0){
-            if (system_load_library(scratch, custom_file_name, &custom_library)){
-                has_library = true;
-            }
-        }
-        
-        if (!has_library){
-            system_error_box(custom_not_found_msg);
-        }
-        custom.get_version = (_Get_Version_Type*)system_get_proc(custom_library, "get_version");
-        if (custom.get_version == 0){
-            system_error_box(custom_fail_load_msg);
-        }
-        else if (custom.get_version(MAJOR, MINOR, PATCH) == 0){
-            system_error_box(custom_fail_version_msg);
-        }
-        custom.init_apis = (_Init_APIs_Type*)system_get_proc(custom_library, "init_apis");
-        if (custom.init_apis == 0){
-            system_error_box(custom_fail_init_apis);
-        }
-    }
     
     linux_x11_init(argc, argv, &plat_settings);
     linux_keycode_init(linuxvars.dpy);
@@ -1918,7 +1827,7 @@ main(int argc, char **argv){
     {
         Scratch_Block scratch(&linuxvars.tctx);
         String_Const_u8 curdir = system_get_path(scratch, SystemPath_CurrentDirectory);
-        app.init(&linuxvars.tctx, &render_target, base_ptr, curdir, custom);
+        app.init(&linuxvars.tctx, &render_target, base_ptr, curdir);
     }
     
     linuxvars.global_frame_mutex = system_mutex_make();

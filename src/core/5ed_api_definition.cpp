@@ -254,6 +254,20 @@ generate_header(Arena *scratch, API_Definition *api, API_Generation_Flag flags, 
         fprintf(out, ")\n");
     }
     
+    if (HasFlag(flags, APIGeneration_NoVTable)){
+        for (API_Call *call = api->first_call;
+             call != 0;
+             call = call->next){
+            String_Const_u8 callable_name = api_get_callable_name(scratch, api->name, call->name, flags);
+            fprintf(out, "%.*s %.*s(",
+                    string_expand(call->return_type),
+                    string_expand(callable_name));
+            api_write_param_list(out, call);
+            fprintf(out, ");\n");
+        }
+        return;
+    }
+    
     for (API_Call *call = api->first_call;
          call != 0;
          call = call->next){
@@ -306,6 +320,9 @@ generate_header(Arena *scratch, API_Definition *api, API_Generation_Flag flags, 
 
 function void
 generate_cpp(Arena *scratch, API_Definition *api, API_Generation_Flag flags, FILE *out){
+    if (HasFlag(flags, APIGeneration_NoVTable)){
+        return;
+    }
     fprintf(out, "function void\n");
     fprintf(out, "%.*s_api_fill_vtable(API_VTable_%.*s *vtable){\n",
             string_expand(api->name),
@@ -435,21 +452,26 @@ api_definition_generate_api_includes(Arena *arena, API_Definition *api, Generate
         return(false);
     }
     
-    FILE *out_file_cpp = fopen((char*)fname_cpp.str, "wb");
-    if (out_file_cpp == 0){
-        printf("could not open output file: '%s'\n", fname_cpp.str);
-        return(false);
+    FILE *out_file_cpp = 0;
+    if (!HasFlag(flags, APIGeneration_NoVTable)){
+        out_file_cpp = fopen((char*)fname_cpp.str, "wb");
+        if (out_file_cpp == 0){
+            printf("could not open output file: '%s'\n", fname_cpp.str);
+            return(false);
+        }
     }
     
     FILE *out_file_con = fopen((char*)fname_con.str, "wb");
-    if (out_file_cpp == 0){
+    if (out_file_con == 0){
         printf("could not open output file: '%s'\n", fname_con.str);
         return(false);
     }
     
     printf("%s:1:\n", fname_ml.str);
     printf("%s:1:\n", fname_h.str);
-    printf("%s:1:\n", fname_cpp.str);
+    if (out_file_cpp != 0){
+        printf("%s:1:\n", fname_cpp.str);
+    }
     printf("%s:1:\n", fname_con.str);
     
     ////////////////////////////////
@@ -457,14 +479,19 @@ api_definition_generate_api_includes(Arena *arena, API_Definition *api, Generate
     
     generate_api_master_list(arena, api, flags, out_file_ml);
     generate_header(arena, api, flags, out_file_h);
-    generate_cpp(arena, api, flags, out_file_cpp);
+    if (out_file_cpp != 0){
+        generate_cpp(arena, api, flags, out_file_cpp);
+    }
     generate_constructor(arena, api, flags, out_file_con);
     
     ////////////////////////////////
     
     fclose(out_file_ml);
     fclose(out_file_h);
-    fclose(out_file_cpp);
+    if (out_file_cpp != 0){
+        fclose(out_file_cpp);
+    }
+    fclose(out_file_con);
     return(true);
 }
 

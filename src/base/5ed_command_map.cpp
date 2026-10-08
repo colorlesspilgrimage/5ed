@@ -1,3 +1,5 @@
+#include "base/5ed_base.h"
+
 /*
 5ed_command_map.cpp - Command management functions
 */

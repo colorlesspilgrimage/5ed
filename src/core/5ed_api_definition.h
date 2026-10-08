@@ -101,6 +101,7 @@ struct API_Definition_List{
 typedef u32 API_Generation_Flag;
 enum{
     APIGeneration_NoAPINameOnCallables = 1,
+    APIGeneration_NoVTable = 2,
 };
 
 typedef u32 API_Check_Flag;
