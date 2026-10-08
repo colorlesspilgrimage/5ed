@@ -5,7 +5,6 @@
 // TOP
 
 CUSTOM_COMMAND_SIG(clipboard_record_clip)
-CUSTOM_DOC("In response to a new clipboard contents events, saves the new clip onto the clipboard history")
 {
     User_Input in = get_current_input(app);
     if (in.event.kind == InputEventKind_Core &&
@@ -69,7 +68,6 @@ clipboard_collection_render(Application_Links *app, Frame_Info frame_info, View_
 }
 
 CUSTOM_UI_COMMAND_SIG(begin_clipboard_collection_mode)
-CUSTOM_DOC("Allows the user to copy multiple strings from other applications before switching to 5ed and pasting them all.")
 {
     local_persist b32 in_clipboard_collection_mode = false;
     if (!in_clipboard_collection_mode){
@@ -108,7 +106,6 @@ CUSTOM_DOC("Allows the user to copy multiple strings from other applications bef
 }
 
 CUSTOM_COMMAND_SIG(copy)
-CUSTOM_DOC("Copy the text in the range from the cursor to the mark onto the clipboard.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -117,7 +114,6 @@ CUSTOM_DOC("Copy the text in the range from the cursor to the mark onto the clip
 }
 
 CUSTOM_COMMAND_SIG(cut)
-CUSTOM_DOC("Cut the text in the range from the cursor to the mark onto the clipboard.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -128,7 +124,6 @@ CUSTOM_DOC("Cut the text in the range from the cursor to the mark onto the clipb
 }
 
 CUSTOM_COMMAND_SIG(paste)
-CUSTOM_DOC("At the cursor, insert the text at the top of the clipboard.")
 {
     clipboard_update_history_from_system(app, 0);
     i32 count = clipboard_count(0);
@@ -162,7 +157,6 @@ CUSTOM_DOC("At the cursor, insert the text at the top of the clipboard.")
 }
 
 CUSTOM_COMMAND_SIG(paste_next)
-CUSTOM_DOC("If the previous command was paste or paste_next, replaces the paste range with the next text down on the clipboard, otherwise operates as the paste command.")
 {
     Scratch_Block scratch(app);
     
@@ -205,21 +199,18 @@ CUSTOM_DOC("If the previous command was paste or paste_next, replaces the paste 
 }
 
 CUSTOM_COMMAND_SIG(paste_and_indent)
-CUSTOM_DOC("Paste from the top of clipboard and run auto-indent on the newly pasted text.")
 {
     paste(app);
     auto_indent_range(app);
 }
 
 CUSTOM_COMMAND_SIG(paste_next_and_indent)
-CUSTOM_DOC("Paste the next item on the clipboard and run auto-indent on the newly pasted text.")
 {
     paste_next(app);
     auto_indent_range(app);
 }
 
 CUSTOM_COMMAND_SIG(clear_clipboard)
-CUSTOM_DOC("Clears the history of the clipboard")
 {
     clipboard_clear(0);
 }
@@ -227,7 +218,6 @@ CUSTOM_DOC("Clears the history of the clipboard")
 ////////////////////////////////
 
 CUSTOM_COMMAND_SIG(multi_paste)
-CUSTOM_DOC("Paste multiple entries from the clipboard at once")
 {
     Scratch_Block scratch(app);
     
@@ -369,7 +359,6 @@ multi_paste_interactive_up_down(Application_Links *app, i32 paste_count, i32 cli
 }
 
 CUSTOM_COMMAND_SIG(multi_paste_interactive)
-CUSTOM_DOC("Paste multiple lines from the clipboard history, controlled with arrow keys")
 {
     i32 clip_count = clipboard_count(0);
     if (clip_count > 0){
@@ -378,7 +367,6 @@ CUSTOM_DOC("Paste multiple lines from the clipboard history, controlled with arr
 }
 
 CUSTOM_COMMAND_SIG(multi_paste_interactive_quick)
-CUSTOM_DOC("Paste multiple lines from the clipboard history, controlled by inputing the number of lines to paste")
 {
     i32 clip_count = clipboard_count(0);
     if (clip_count > 0){

@@ -10,8 +10,6 @@
 
 #include "base/5ed_base.h"
 #include "core/5ed_font_interface.h"
-#include "base/generated/graphics_api.h"
-#include "base/generated/font_api.h"
 #include "core/5ed_font_set.h"
 #include "core/5ed_render_target.h"
 #include "core/5ed.h"
@@ -23,8 +21,6 @@
 // The test does not start the core, so they do nothing.
 void
 custom_layer_init(Application_Links *app){}
-void
-custom_layer_bind_api(API_VTable_custom *vtable){}
 
 struct Parse_Result{
     Plat_Settings plat;

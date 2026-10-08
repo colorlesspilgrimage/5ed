@@ -25,7 +25,6 @@ range_is_scope_selection(Application_Links *app, Buffer_ID buffer, Range_i64 ran
 }
 
 CUSTOM_COMMAND_SIG(select_surrounding_scope)
-CUSTOM_DOC("Finds the scope enclosed by '{' '}' surrounding the cursor and puts the cursor and mark on the '{' and '}'.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -37,7 +36,6 @@ CUSTOM_DOC("Finds the scope enclosed by '{' '}' surrounding the cursor and puts 
 }
 
 CUSTOM_COMMAND_SIG(select_surrounding_scope_maximal)
-CUSTOM_DOC("Selects the top-most scope that surrounds the cursor.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -55,7 +53,6 @@ CUSTOM_DOC("Selects the top-most scope that surrounds the cursor.")
 }
 
 CUSTOM_COMMAND_SIG(select_next_scope_absolute)
-CUSTOM_DOC("Finds the first scope started by '{' after the cursor and puts the cursor and mark on the '{' and '}'.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -64,7 +61,6 @@ CUSTOM_DOC("Finds the first scope started by '{' after the cursor and puts the c
 }
 
 CUSTOM_COMMAND_SIG(select_next_scope_after_current)
-CUSTOM_DOC("If a scope is selected, find first scope that starts after the selected scope. Otherwise find the first scope that starts after the cursor.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -80,7 +76,6 @@ CUSTOM_DOC("If a scope is selected, find first scope that starts after the selec
 }
 
 CUSTOM_COMMAND_SIG(select_prev_scope_absolute)
-CUSTOM_DOC("Finds the first scope started by '{' before the cursor and puts the cursor and mark on the '{' and '}'.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
@@ -97,20 +92,17 @@ CUSTOM_DOC("Finds the first scope started by '{' before the cursor and puts the 
 }
 
 CUSTOM_COMMAND_SIG(select_prev_top_most_scope)
-CUSTOM_DOC("Finds the first scope that starts before the cursor, then finds the top most scope that contains that scope.")
 {
     select_prev_scope_absolute(app);
     select_surrounding_scope_maximal(app);
 }
 
 CUSTOM_COMMAND_SIG(place_in_scope)
-CUSTOM_DOC("Wraps the code contained in the range between cursor and mark with a new curly brace scope.")
 {
     place_begin_and_end_on_own_lines(app, "{", "}");
 }
 
 CUSTOM_COMMAND_SIG(delete_current_scope)
-CUSTOM_DOC("Deletes the braces surrounding the currently selected scope.  Leaves the contents within the scope.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);

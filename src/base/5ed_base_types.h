@@ -57,7 +57,6 @@ enum{
 
 
 #define function static
-#define api(x)
 
 #define internal static
 #define local_persist static

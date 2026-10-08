@@ -113,7 +113,6 @@ while IFS= read -r line; do
     [ -n "$inc" ] || continue
     case "$inc" in
         base/*|core/*|custom/*|platform/*) ;;
-        generated/command_metadata.h|generated/managed_id_metadata.cpp) ;;
         *)
             echo "FAIL: include-style $file $inc"
             inc_bad=1
@@ -152,9 +151,6 @@ while IFS= read -r line; do
         core) [ "$top" = "base" ] || [ "$top" = "core" ] && ok=1 ;;
         platform) [ "$top" = "base" ] || [ "$top" = "core" ] || [ "$top" = "platform" ] && ok=1 ;;
     esac
-    case "$inc" in
-        generated/command_metadata.h|generated/managed_id_metadata.cpp) ok=1 ;;
-    esac
     if [ "$ok" -eq 0 ]; then
         echo "FAIL: layer-direction $file -> $inc"
         layer_bad=1
@@ -179,7 +175,6 @@ once=(
     5ed_buffer_seek_constructors.cpp
     5ed_layout_lookup.cpp
     5ed_log_helpers.cpp
-    5ed_doc_content_types.cpp
     5ed_mem.cpp
     5ed_malloc_allocator.cpp
     5ed_stdio_file.cpp
@@ -296,6 +291,23 @@ done
 if [ "$so_bad" -eq 0 ]; then
     pass "no-shared-objects"
 else
+    fail=1
+fi
+
+# 11. no-generators
+require_no_grep no-generators -rnE "META_PASS|CUSTOM_DOC|CUSTOM_ID\\(|STATIC_LINK_API|DYNAMIC_LINK_API|API_VTable|api_read_vtable|api_fill_vtable|\\bapi\\((custom|system|font|graphics)\\)" src CMakeLists.txt
+gen_bad=0
+for f in src/base/generated/*; do
+    base=$(basename "$f")
+    case "$base" in
+        5ed_event_codes.h|lexer_cpp.h|lexer_cpp.cpp) ;;
+        *)
+            echo "FAIL: no-generators extra file $f"
+            gen_bad=1
+            ;;
+    esac
+done
+if [ "$gen_bad" -ne 0 ]; then
     fail=1
 fi
 

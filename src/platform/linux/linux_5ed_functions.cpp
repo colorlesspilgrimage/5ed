@@ -257,28 +257,6 @@ system_save_file(Arena* scratch, char* file_name, String_Const_u8 data){
     return result;
 }
 
-b32
-system_load_library(Arena* scratch, String_Const_u8 file_name, System_Library* out){
-    LINUX_FN_DEBUG("%.*s", (int)file_name.size, file_name.str);
-    void* library = dlopen((const char*)file_name.str, RTLD_LAZY);
-    if (library != NULL) {
-        *(void**)out = library;
-        return true;
-    }
-    return false;
-}
-
-b32
-system_release_library(System_Library handle){
-    LINUX_FN_DEBUG();
-    return dlclose(*(void**)&handle) == 0;
-}
-
-Void_Func*
-system_get_proc(System_Library handle, char* proc_name){
-    LINUX_FN_DEBUG("%s", proc_name);
-    return (Void_Func*)dlsym(*(void**)&handle, proc_name);
-}
 
 u64
 system_now_time(void){
@@ -309,7 +287,8 @@ linux_tm_from_date_time(struct tm *out, Date_Time *in){
     out->tm_sec = in->sec;
 }
 
-system_now_date_time_universal_sig(){
+Date_Time
+system_now_date_time_universal(void){
     time_t now_time = time(0);
     struct tm *now_tm = gmtime(&now_time);
     Date_Time result = {};
@@ -317,7 +296,8 @@ system_now_date_time_universal_sig(){
     return(result);
 }
 
-system_local_date_time_from_universal_sig(){
+Date_Time
+system_local_date_time_from_universal(Date_Time* date_time){
     struct tm univ_tm = {};
     linux_tm_from_date_time(&univ_tm, date_time);
     time_t utc_time = timegm(&univ_tm);
@@ -327,7 +307,8 @@ system_local_date_time_from_universal_sig(){
     return(result);
 }
 
-system_universal_date_time_from_local_sig(){
+Date_Time
+system_universal_date_time_from_local(Date_Time* date_time){
     struct tm local_tm = {};
     linux_tm_from_date_time(&local_tm, date_time);
     time_t loc_time = timelocal(&local_tm);
@@ -810,7 +791,8 @@ system_get_keyboard_modifiers(Arena* arena){
     return(copy_modifier_set(arena, &linuxvars.input.pers.modifiers));
 }
 
-system_set_key_mode_sig(){
+void
+system_set_key_mode(Key_Mode mode){
     linuxvars.key_mode = mode;
 }
 

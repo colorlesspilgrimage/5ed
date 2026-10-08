@@ -1,6 +1,3 @@
 build/
 .DS_Store
 *.dSYM
-# Unused by-products of the core API generators (font, graphics).
-src/base/generated/font_api_*
-src/base/generated/graphics_api_*

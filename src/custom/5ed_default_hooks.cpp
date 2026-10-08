@@ -5,7 +5,6 @@
 // TOP
 
 CUSTOM_COMMAND_SIG(default_startup)
-CUSTOM_DOC("Default command for responding to a startup event")
 {
     ProfileScope(app, "default startup");
     User_Input input = get_current_input(app);
@@ -31,7 +30,6 @@ CUSTOM_DOC("Default command for responding to a startup event")
 }
 
 CUSTOM_COMMAND_SIG(default_try_exit)
-CUSTOM_DOC("Default command for responding to a try-exit event")
 {
     User_Input input = get_current_input(app);
     if (match_core_code(&input, CoreCode_TryExit)){
@@ -75,7 +73,6 @@ default_implicit_map(Application_Links *app, String_ID lang, String_ID mode, Inp
 }
 
 CUSTOM_COMMAND_SIG(default_view_input_handler)
-CUSTOM_DOC("Input consumption loop for default view behavior")
 {
     Scratch_Block scratch(app);
     default_input_handler_init(app, scratch);

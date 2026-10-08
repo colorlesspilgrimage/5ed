@@ -775,7 +775,6 @@ prj_cmd_from_user(Application_Links *app, Variable_Handle prj_var, String8 query
 // NOTE(allen): Commands
 
 CUSTOM_COMMAND_SIG(close_all_code)
-CUSTOM_DOC("Closes any buffer with a filename ending with an extension configured to be recognized as a code file type.")
 {
     Scratch_Block scratch(app);
     String8 treat_as_code = def_get_config_string(scratch, vars_save_string_lit("treat_as_code"));
@@ -784,7 +783,6 @@ CUSTOM_DOC("Closes any buffer with a filename ending with an extension configure
 }
 
 CUSTOM_COMMAND_SIG(open_all_code)
-CUSTOM_DOC("Open all code in the current directory. File types are determined by extensions. An extension is considered code based on the extensions specified in 5ed.config.")
 {
     Scratch_Block scratch(app);
     String8 treat_as_code = def_get_config_string(scratch, vars_save_string_lit("treat_as_code"));
@@ -793,7 +791,6 @@ CUSTOM_DOC("Open all code in the current directory. File types are determined by
 }
 
 CUSTOM_COMMAND_SIG(open_all_code_recursive)
-CUSTOM_DOC("Works as open_all_code but also runs in all subdirectories.")
 {
     Scratch_Block scratch(app);
     String8 treat_as_code = def_get_config_string(scratch, vars_save_string_lit("treat_as_code"));
@@ -802,7 +799,6 @@ CUSTOM_DOC("Works as open_all_code but also runs in all subdirectories.")
 }
 
 CUSTOM_COMMAND_SIG(load_project)
-CUSTOM_DOC("Looks for a project.5ed file in the current directory and tries to load it.  Looks in parent directories until a project file is found or there are no more parents.")
 {
     // TODO(allen): compress this _thoughtfully_
     
@@ -920,7 +916,6 @@ CUSTOM_DOC("Looks for a project.5ed file in the current directory and tries to l
 }
 
 CUSTOM_COMMAND_SIG(project_fkey_command)
-CUSTOM_DOC("Run an 'fkey command' configured in a project.5ed file.  Determines the index of the 'fkey command' by which function key or numeric key was pressed to trigger the command.")
 {
     ProfileScope(app, "project fkey command");
     User_Input input = get_current_input(app);
@@ -946,7 +941,6 @@ CUSTOM_DOC("Run an 'fkey command' configured in a project.5ed file.  Determines 
 }
 
 CUSTOM_COMMAND_SIG(project_go_to_root_directory)
-CUSTOM_DOC("Changes 5ed's hot directory to the root directory of the currently loaded project. With no loaded project nothing hapepns.")
 {
     Scratch_Block scratch(app);
     Variable_Handle prj_var = vars_read_key(vars_get_root(), vars_save_string_lit("prj_config"));
@@ -957,20 +951,17 @@ CUSTOM_DOC("Changes 5ed's hot directory to the root directory of the currently l
 }
 
 CUSTOM_COMMAND_SIG(setup_new_project)
-CUSTOM_DOC("Queries the user for several configuration options and initializes a new 5ed project with a build shell script.")
 {
     prj_setup_scripts(app, PrjSetupScriptFlag_Project|PrjSetupScriptFlag_Sh);
     load_project(app);
 }
 
 CUSTOM_COMMAND_SIG(setup_build_sh)
-CUSTOM_DOC("Queries the user for several configuration options and initializes a new build shell script.")
 {
     prj_setup_scripts(app, PrjSetupScriptFlag_Sh);
 }
 
 CUSTOM_COMMAND_SIG(project_command_lister)
-CUSTOM_DOC("Open a lister of all commands in the currently loaded project.")
 {
     Variable_Handle prj_var = vars_read_key(vars_get_root(), vars_save_string_lit("prj_config"));
     Variable_Handle prj_cmd = prj_cmd_from_user(app, prj_var, string_u8_litexpr("Command:"));
@@ -980,7 +971,6 @@ CUSTOM_DOC("Open a lister of all commands in the currently loaded project.")
 }
 
 CUSTOM_COMMAND_SIG(project_reprint)
-CUSTOM_DOC("Prints the current project to the file it was loaded from; prints in the most recent project file version")
 {
     Variable_Handle prj_var = vars_read_key(vars_get_root(), vars_save_string_lit("prj_config"));
     if (!vars_is_nil(prj_var)){
@@ -1018,97 +1008,81 @@ CUSTOM_DOC("Prints the current project to the file it was loaded from; prints in
 }
 
 CUSTOM_COMMAND_SIG(project_command_F1)
-CUSTOM_DOC("Run the command with index 1")
 {
     prj_exec_command_fkey_index(app, 0);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F2)
-CUSTOM_DOC("Run the command with index 2")
 {
     prj_exec_command_fkey_index(app, 1);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F3)
-CUSTOM_DOC("Run the command with index 3")
 {
     prj_exec_command_fkey_index(app, 2);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F4)
-CUSTOM_DOC("Run the command with index 4")
 {
     prj_exec_command_fkey_index(app, 3);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F5)
-CUSTOM_DOC("Run the command with index 5")
 {
     prj_exec_command_fkey_index(app, 4);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F6)
-CUSTOM_DOC("Run the command with index 6")
 {
     prj_exec_command_fkey_index(app, 5);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F7)
-CUSTOM_DOC("Run the command with index 7")
 {
     prj_exec_command_fkey_index(app, 6);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F8)
-CUSTOM_DOC("Run the command with index 8")
 {
     prj_exec_command_fkey_index(app, 7);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F9)
-CUSTOM_DOC("Run the command with index 9")
 {
     prj_exec_command_fkey_index(app, 8);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F10)
-CUSTOM_DOC("Run the command with index 10")
 {
     prj_exec_command_fkey_index(app, 9);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F11)
-CUSTOM_DOC("Run the command with index 11")
 {
     prj_exec_command_fkey_index(app, 10);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F12)
-CUSTOM_DOC("Run the command with index 12")
 {
     prj_exec_command_fkey_index(app, 11);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F13)
-CUSTOM_DOC("Run the command with index 13")
 {
     prj_exec_command_fkey_index(app, 12);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F14)
-CUSTOM_DOC("Run the command with index 14")
 {
     prj_exec_command_fkey_index(app, 13);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F15)
-CUSTOM_DOC("Run the command with index 15")
 {
     prj_exec_command_fkey_index(app, 14);
 }
 
 CUSTOM_COMMAND_SIG(project_command_F16)
-CUSTOM_DOC("Run the command with index 16")
 {
     prj_exec_command_fkey_index(app, 15);
 }

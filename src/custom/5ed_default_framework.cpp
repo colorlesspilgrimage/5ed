@@ -354,13 +354,11 @@ change_active_panel_send_command(Application_Links *app, Custom_Command_Function
 }
 
 CUSTOM_COMMAND_SIG(change_active_panel)
-CUSTOM_DOC("Change the currently active panel, moving to the panel with the next highest view_id.")
 {
     change_active_panel_send_command(app, 0);
 }
 
 CUSTOM_COMMAND_SIG(change_active_panel_backwards)
-CUSTOM_DOC("Change the currently active panel, moving to the panel with the next lowest view_id.")
 {
     View_ID view = get_active_view(app, Access_Always);
     view = get_prev_view_looped_primary_panels(app, view, Access_Always);
@@ -370,7 +368,6 @@ CUSTOM_DOC("Change the currently active panel, moving to the panel with the next
 }
 
 CUSTOM_COMMAND_SIG(open_panel_vsplit)
-CUSTOM_DOC("Create a new panel by vertically splitting the active panel.")
 {
     View_ID view = get_active_view(app, Access_Always);
     View_ID new_view = open_view(app, view, ViewSplit_Right);
@@ -380,7 +377,6 @@ CUSTOM_DOC("Create a new panel by vertically splitting the active panel.")
 }
 
 CUSTOM_COMMAND_SIG(open_panel_hsplit)
-CUSTOM_DOC("Create a new panel by horizontally splitting the active panel.")
 {
     View_ID view = get_active_view(app, Access_Always);
     View_ID new_view = open_view(app, view, ViewSplit_Bottom);
@@ -452,7 +448,6 @@ save_all_dirty_buffers_with_postfix(Application_Links *app, String_Const_u8 post
 }
 
 CUSTOM_COMMAND_SIG(save_all_dirty_buffers)
-CUSTOM_DOC("Saves all buffers marked dirty (showing the '*' indicator).")
 {
     String_Const_u8 empty = {};
     save_all_dirty_buffers_with_postfix(app, empty);
@@ -473,37 +468,31 @@ set_mouse_suppression(b32 suppress){
 }
 
 CUSTOM_COMMAND_SIG(suppress_mouse)
-CUSTOM_DOC("Hides the mouse and causes all mosue input (clicks, position, wheel) to be ignored.")
 {
     set_mouse_suppression(true);
 }
 
 CUSTOM_COMMAND_SIG(allow_mouse)
-CUSTOM_DOC("Shows the mouse and causes all mouse input to be processed normally.")
 {
     set_mouse_suppression(false);
 }
 
 CUSTOM_COMMAND_SIG(toggle_mouse)
-CUSTOM_DOC("Toggles the mouse suppression mode, see suppress_mouse and allow_mouse.")
 {
     set_mouse_suppression(!suppressing_mouse);
 }
 
 CUSTOM_COMMAND_SIG(set_mode_to_original)
-CUSTOM_DOC("Sets the edit mode to 5ed original.")
 {
     fcoder_mode = FCoderMode_Original;
 }
 
 CUSTOM_COMMAND_SIG(set_mode_to_notepad_like)
-CUSTOM_DOC("Sets the edit mode to Notepad like.")
 {
     begin_notepad_mode(app);
 }
 
 CUSTOM_COMMAND_SIG(toggle_highlight_line_at_cursor)
-CUSTOM_DOC("Toggles the line highlight at the cursor.")
 {
     String_ID key = vars_save_string_lit("highlight_line_at_cursor");
     b32 val = def_get_config_b32(key);
@@ -511,7 +500,6 @@ CUSTOM_DOC("Toggles the line highlight at the cursor.")
 }
 
 CUSTOM_COMMAND_SIG(toggle_highlight_enclosing_scopes)
-CUSTOM_DOC("In code files scopes surrounding the cursor are highlighted with distinguishing colors.")
 {
     String_ID key = vars_save_string_lit("use_scope_highlight");
     b32 val = def_get_config_b32(key);
@@ -519,7 +507,6 @@ CUSTOM_DOC("In code files scopes surrounding the cursor are highlighted with dis
 }
 
 CUSTOM_COMMAND_SIG(toggle_paren_matching_helper)
-CUSTOM_DOC("In code files matching parentheses pairs are colored with distinguishing colors.")
 {
     String_ID key = vars_save_string_lit("use_paren_helper");
     b32 val = def_get_config_b32(key);
@@ -527,13 +514,11 @@ CUSTOM_DOC("In code files matching parentheses pairs are colored with distinguis
 }
 
 CUSTOM_COMMAND_SIG(toggle_fullscreen)
-CUSTOM_DOC("Toggle fullscreen mode on or off.  The change(s) do not take effect until the next frame.")
 {
     system_set_fullscreen(!system_is_fullscreen());
 }
 
 CUSTOM_COMMAND_SIG(load_themes_default_folder)
-CUSTOM_DOC("Loads all the theme files in the default theme folder.")
 {
     String_Const_u8 fcoder_extension = string_u8_litexpr(".5ed");
     save_all_dirty_buffers_with_postfix(app, fcoder_extension);
@@ -552,7 +537,6 @@ CUSTOM_DOC("Loads all the theme files in the default theme folder.")
 }
 
 CUSTOM_COMMAND_SIG(load_themes_hot_directory)
-CUSTOM_DOC("Loads all the theme files in the current hot directory.")
 {
     String_Const_u8 fcoder_extension = string_u8_litexpr(".5ed");
     save_all_dirty_buffers_with_postfix(app, fcoder_extension);
@@ -563,7 +547,6 @@ CUSTOM_DOC("Loads all the theme files in the current hot directory.")
 }
 
 CUSTOM_COMMAND_SIG(clear_all_themes)
-CUSTOM_DOC("Clear the theme list")
 {
     if (global_theme_arena.base_allocator == 0){
         global_theme_arena = make_arena_system();
@@ -996,8 +979,6 @@ push_clipboard_index(Arena *arena, i32 clipboard_id, i32 item_index){
 
 ////////////////////////////////
 
-function void
-initialize_managed_id_metadata(Application_Links *app);
 
 function void
 default_framework_init(Application_Links *app){
@@ -1008,7 +989,7 @@ default_framework_init(Application_Links *app){
     buffer_modified_set_init();
     Profile_Global_List *list = get_core_profile_list(app);
     ProfileThreadName(tctx, list, string_u8_litexpr("main"));
-    initialize_managed_id_metadata(app);
+    initialize_managed_ids(app);
     set_default_color_scheme(app);
     heap_init(&global_heap, tctx->allocator);
 	global_permanent_arena = make_arena_system();

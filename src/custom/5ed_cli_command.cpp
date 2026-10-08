@@ -5,7 +5,6 @@
 // TOP
 
 CUSTOM_COMMAND_SIG(execute_previous_cli)
-CUSTOM_DOC("If the command execute_any_cli has already been used, this will execute a CLI reusing the most recent buffer name and command.")
 {
     String_Const_u8 out_buffer = SCu8(out_buffer_space);
     String_Const_u8 cmd = SCu8(command_space);
@@ -20,7 +19,7 @@ CUSTOM_DOC("If the command execute_any_cli has already been used, this will exec
 }
 
 CUSTOM_COMMAND_SIG(execute_any_cli)
-CUSTOM_DOC("Queries for an output buffer name and system command, runs the system command as a CLI and prints the output to the specified buffer."){
+{
     Scratch_Block scratch(app);
     Query_Bar_Group group(app);
     

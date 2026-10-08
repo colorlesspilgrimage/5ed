@@ -14,7 +14,7 @@ Requires GCC (g++), CMake 3.20+, and the X11, Xfixes, OpenGL (GLX) and FreeType 
 
 Release does not use link-time optimization. A Release IPO trial printed 57 warnings. Each warning says that an OpenGL symbol changed type. The build stays without those warnings. See ROADMAP item 3.
 
-The build writes one executable, `build/5ed`. It also copies `ship_files/` beside that executable. The copy holds fonts, themes, default config and bindings. The build does not write a core library or a custom library. The configure step removes these old libraries from an old build folder. The command table is generated into `build/gen/`.
+The build writes one executable, `build/5ed`. It also copies `ship_files/` beside that executable. The copy holds fonts, themes, default config and bindings. The build does not write a core library or a custom library. The configure step removes these old libraries from an old build folder. The command table is the list `src/custom/5ed_command_list.h`.
 
 The command line options `-d` and `-D` are gone. 5ed ignores each of them and the path after it. Files after that path open as usual. After any other unknown option, 5ed ignores all remaining arguments.
 
@@ -24,18 +24,17 @@ Config, bindings, themes and projects are `*.5ed` files, looked up in the loaded
 
 # Customising 5ed
 
-Edit the files in `src/custom/` and rebuild with `cmake --build build -j`. There is no plugin path and no custom library option. User config, bindings, and themes (`*.5ed` files) need no rebuild.
+Edit the files in `src/custom/` and rebuild with `cmake --build build -j`. There is no plugin path and no custom library option. User config, bindings, and themes (`*.5ed` files) need no rebuild. A new command needs a function with `CUSTOM_COMMAND_SIG(name)`. Use `CUSTOM_UI_COMMAND_SIG` for a user-interface command. Add one `COMMAND` line in `src/custom/5ed_command_list.h`. Run `check-commands` to check the list.
 
-Developer targets (not built by default) regenerate the checked-in files under `src/base/generated/`: `regen` (keycodes and the system, font, graphics and custom APIs), `regen-lexer` (C++ lexer tables; its output currently differs from the checked-in `lexer_cpp.cpp`, so only run it when the lexer definition changes), `check-api-docs` (reports undocumented Custom API functions), `check-structure` (checks the source layout and the once-built base library; it builds all tools first), and `check-security` (checks that the project setup commands do not write through symlinks or change files that exist).
+Developer targets are not built by default. `regen` regenerates the keycode file. `regen-lexer` regenerates the C++ lexer tables. That output is the same on every run and equals the checked-in files. `check-structure` checks the source layout and the once-built base library. `check-security` checks that setup does not write through a symlink. It also checks that setup does not change a file that exists. `check-commands` checks the command list against the command definitions.
 
-Other check targets: `check-tools` builds every generator tool without running it. `check-project-file` writes a new project with the `setup_new_project` generators and parses it, this repo's `project.5ed` and `ship_files/config.5ed` with the real config parser. `check-command-line` parses sample command lines with the real core parser. `scripts/test-check-structure.sh <source-root> <build-dir>...` tests the `check-structure` script itself.
+`check-tools` builds the lexer tool and the keycode tool. `check-project-file` writes a new project and parses it. It also parses this repo's `project.5ed` and `ship_files/config.5ed`. `check-command-line` parses sample command lines with the real core parser. `scripts/test-check-structure.sh` tests the `check-structure` script.
+
 
 # Inherited problems being worked on
 
-1. Build system: multiple stages and metaprograms (command metadata extraction, API generators, lexer generator).
-2. The documentation system is over-complicated and the documentation is incomplete.
-3. The lexer generator is too complicated, and adding a language is hard.
-4. Several layers of configuration parsers.
+1. The lexer generator stays. It now gives the same output on every run.
+2. Several layers of configuration parsers.
 
 # License
 

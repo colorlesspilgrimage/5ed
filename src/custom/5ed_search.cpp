@@ -166,55 +166,46 @@ list_all_locations__generic_view_range(Application_Links *app, List_All_Location
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations)
-CUSTOM_DOC("Queries the user for a string and lists all exact case-sensitive matches found in all open buffers.")
 {
     list_all_locations__generic_query(app, ListAllLocationsFlag_CaseSensitive);
 }
 
 CUSTOM_COMMAND_SIG(list_all_substring_locations)
-CUSTOM_DOC("Queries the user for a string and lists all case-sensitive substring matches found in all open buffers.")
 {
     list_all_locations__generic_query(app, ListAllLocationsFlag_CaseSensitive|ListAllLocationsFlag_MatchSubstring);
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations_case_insensitive)
-CUSTOM_DOC("Queries the user for a string and lists all exact case-insensitive matches found in all open buffers.")
 {
     list_all_locations__generic_query(app, 0);
 }
 
 CUSTOM_COMMAND_SIG(list_all_substring_locations_case_insensitive)
-CUSTOM_DOC("Queries the user for a string and lists all case-insensitive substring matches found in all open buffers.")
 {
     list_all_locations__generic_query(app, ListAllLocationsFlag_MatchSubstring);
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations_of_identifier)
-CUSTOM_DOC("Reads a token or word under the cursor and lists all exact case-sensitive mathces in all open buffers.")
 {
     list_all_locations__generic_identifier(app, ListAllLocationsFlag_CaseSensitive);
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations_of_identifier_case_insensitive)
-CUSTOM_DOC("Reads a token or word under the cursor and lists all exact case-insensitive mathces in all open buffers.")
 {
     list_all_locations__generic_identifier(app, ListAllLocationsFlag_CaseSensitive|ListAllLocationsFlag_MatchSubstring);
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations_of_selection)
-CUSTOM_DOC("Reads the string in the selected range and lists all exact case-sensitive mathces in all open buffers.")
 {
     list_all_locations__generic_view_range(app, ListAllLocationsFlag_CaseSensitive);
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations_of_selection_case_insensitive)
-CUSTOM_DOC("Reads the string in the selected range and lists all exact case-insensitive mathces in all open buffers.")
 {
     list_all_locations__generic_view_range(app, 0);
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations_of_type_definition)
-CUSTOM_DOC("Queries user for string, lists all locations of strings that appear to define a type whose name matches the input string.")
 {
     Scratch_Block scratch(app);
     String_Const_u8_Array array = query_user_list_definition_needle(app, scratch);
@@ -222,7 +213,6 @@ CUSTOM_DOC("Queries user for string, lists all locations of strings that appear 
 }
 
 CUSTOM_COMMAND_SIG(list_all_locations_of_type_definition_of_identifier)
-CUSTOM_DOC("Reads a token or word under the cursor and lists all locations of strings that appear to define a type whose name matches it.")
 {
     Scratch_Block scratch(app);
     String_Const_u8 base_needle = push_token_or_word_under_active_cursor(app, scratch);
@@ -431,7 +421,6 @@ word_complete_get_shared_iter(Application_Links *app){
 }
 
 CUSTOM_COMMAND_SIG(word_complete)
-CUSTOM_DOC("Iteratively tries completing the word to the left of the cursor with other words in open buffers that have the same prefix string.")
 {
     ProfileScope(app, "word complete");
     
@@ -677,7 +666,6 @@ get_word_complete_from_user_drop_down(Application_Links *app){
 }
 
 CUSTOM_COMMAND_SIG(word_complete_drop_down)
-CUSTOM_DOC("Word complete with drop down menu.")
 {
     View_ID view = get_active_view(app, Access_ReadWriteVisible);
     Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);

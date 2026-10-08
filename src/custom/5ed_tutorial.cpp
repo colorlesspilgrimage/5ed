@@ -7,7 +7,6 @@
 global Tutorial_State tutorial = {};
 
 CUSTOM_COMMAND_SIG(kill_tutorial)
-CUSTOM_DOC("If there is an active tutorial, kill it.")
 {
     if (!tutorial.in_tutorial){
         return;
@@ -18,7 +17,6 @@ CUSTOM_DOC("If there is an active tutorial, kill it.")
 }
 
 CUSTOM_COMMAND_SIG(tutorial_maximize)
-CUSTOM_DOC("Expand the tutorial window")
 {
     if (!tutorial.in_tutorial){
         return;
@@ -32,7 +30,6 @@ CUSTOM_DOC("Expand the tutorial window")
 }
 
 CUSTOM_COMMAND_SIG(tutorial_minimize)
-CUSTOM_DOC("Shrink the tutorial window")
 {
     if (!tutorial.in_tutorial){
         return;
@@ -742,9 +739,9 @@ hms_demo_tutorial_slide_8(Application_Links *app, Arena *arena){
     
     push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr(""));
     
-    push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("\tThe macros CUSTOM_COMMAND_SIG and CUSTOM_DOC markup the commands to create the list of all available commands."));
+    push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("\tThe list src/custom/5ed_command_list.h holds every command."));
     
-    push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("\tThis means that user written commands that use the same markup automatically appear in the command_lister along side built in commands!"));
+    push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("\tAdd one line there for a new command so that it shows in the command_lister."));
     
     return(result);
 }
@@ -867,7 +864,6 @@ hms_demo_tutorial_slide_11(Application_Links *app, Arena *arena){
 }
 
 CUSTOM_COMMAND_SIG(hms_demo_tutorial)
-CUSTOM_DOC("Tutorial for built in 5ed bindings and features.")
 {
     local_persist Tutorial_Slide_Function *slides[] = {
         // basic navigation

@@ -2232,31 +2232,26 @@ seek_pos_of_visual_line(Application_Links *app, Side side){
 }
 
 CUSTOM_COMMAND_SIG(seek_beginning_of_textual_line)
-CUSTOM_DOC("Seeks the cursor to the beginning of the line across all text.")
 {
     seek_pos_of_textual_line(app, Side_Min);
 }
 
 CUSTOM_COMMAND_SIG(seek_end_of_textual_line)
-CUSTOM_DOC("Seeks the cursor to the end of the line across all text.")
 {
     seek_pos_of_textual_line(app, Side_Max);
 }
 
 CUSTOM_COMMAND_SIG(seek_beginning_of_line)
-CUSTOM_DOC("Seeks the cursor to the beginning of the visual line.")
 {
     seek_pos_of_visual_line(app, Side_Min);
 }
 
 CUSTOM_COMMAND_SIG(seek_end_of_line)
-CUSTOM_DOC("Seeks the cursor to the end of the visual line.")
 {
     seek_pos_of_visual_line(app, Side_Max);
 }
 
 CUSTOM_COMMAND_SIG(goto_beginning_of_file)
-CUSTOM_DOC("Sets the cursor to the beginning of the file.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     view_set_cursor_and_preferred_x(app, view, seek_pos(0));
@@ -2264,7 +2259,6 @@ CUSTOM_DOC("Sets the cursor to the beginning of the file.")
 }
 
 CUSTOM_COMMAND_SIG(goto_end_of_file)
-CUSTOM_DOC("Sets the cursor to the end of the file.")
 {
     View_ID view = get_active_view(app, Access_ReadVisible);
     Buffer_ID buffer_id = view_get_buffer(app, view, Access_ReadVisible);

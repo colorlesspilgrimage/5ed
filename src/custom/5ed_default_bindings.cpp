@@ -9,11 +9,6 @@
 
 #include "custom/5ed_default_include.cpp"
 
-// NOTE(allen): Users can declare their own managed IDs here.
-
-#if !defined(META_PASS)
-#include "generated/managed_id_metadata.cpp"
-#endif
 
 void
 custom_layer_init(Application_Links *app){

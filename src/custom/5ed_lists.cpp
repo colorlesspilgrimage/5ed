@@ -128,7 +128,7 @@ command_lister_status_bindings(Mapping *mapping, Command_Map_ID map_id){
 function Custom_Command_Function*
 get_command_from_user(Application_Links *app, String_Const_u8 query, i32 *command_ids, i32 command_id_count, Command_Lister_Status_Rule *status_rule){
     if (command_ids == 0){
-        command_id_count = command_one_past_last_id;
+        command_id_count = command_table_count;
     }
     
     Scratch_Block scratch(app);
@@ -141,7 +141,7 @@ get_command_from_user(Application_Links *app, String_Const_u8 query, i32 *comman
         if (command_ids != 0){
             j = command_ids[i];
         }
-        j = clamp(0, j, command_one_past_last_id);
+        j = clamp(0, j, command_table_count - 1);
         
         Custom_Command_Function *proc = fcoder_metacmd_table[j].proc;
         String_Const_u8 status = {};
@@ -509,7 +509,6 @@ do_5ed_close_user_check(Application_Links *app, View_ID view){
 ////////////////////////////////
 
 CUSTOM_UI_COMMAND_SIG(interactive_switch_buffer)
-CUSTOM_DOC("Interactively switch to an open buffer.")
 {
     Buffer_ID buffer = get_buffer_from_user(app, "Switch:");
     if (buffer != 0){
@@ -519,7 +518,6 @@ CUSTOM_DOC("Interactively switch to an open buffer.")
 }
 
 CUSTOM_UI_COMMAND_SIG(interactive_kill_buffer)
-CUSTOM_DOC("Interactively kill an open buffer.")
 {
     Buffer_ID buffer = get_buffer_from_user(app, "Kill:");
     if (buffer != 0){
@@ -610,7 +608,6 @@ activate_open_or_new__generic(Application_Links *app, View_ID view,
 }
 
 CUSTOM_UI_COMMAND_SIG(interactive_open_or_new)
-CUSTOM_DOC("Interactively open a file out of the file system.")
 {
     for (;;){
         Scratch_Block scratch(app);
@@ -659,7 +656,6 @@ CUSTOM_DOC("Interactively open a file out of the file system.")
 }
 
 CUSTOM_UI_COMMAND_SIG(interactive_new)
-CUSTOM_DOC("Interactively creates a new file.")
 {
     for (;;){
         Scratch_Block scratch(app);
@@ -713,7 +709,6 @@ CUSTOM_DOC("Interactively creates a new file.")
 }
 
 CUSTOM_UI_COMMAND_SIG(interactive_open)
-CUSTOM_DOC("Interactively opens a file.")
 {
     for (;;){
         Scratch_Block scratch(app);
@@ -759,7 +754,6 @@ CUSTOM_DOC("Interactively opens a file.")
 ////////////////////////////////
 
 CUSTOM_UI_COMMAND_SIG(command_lister)
-CUSTOM_DOC("Opens an interactive list of all registered commands.")
 {
     View_ID view = get_this_ctx_view(app, Access_Always);
     if (view != 0){
@@ -783,7 +777,6 @@ CUSTOM_DOC("Opens an interactive list of all registered commands.")
 ////////////////////////////////
 
 CUSTOM_UI_COMMAND_SIG(theme_lister)
-CUSTOM_DOC("Opens an interactive list of all registered themes.")
 {
     Color_Table *color_table = get_color_table_from_user(app);
     if (color_table != 0){

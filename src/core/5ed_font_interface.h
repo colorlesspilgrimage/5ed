@@ -18,9 +18,6 @@ enum{
     TextureKind_Mono,
 };
 
-typedef u32 Graphics_Get_Texture_Function(Vec3_i32 dim, Texture_Kind texture_kind);
-typedef b32 Graphics_Fill_Texture_Function(Texture_Kind texture_kind, u32 texture,
-                                           Vec3_i32 p, Vec3_i32 dim, void *data);
 
 ////////////////////////////////
 
@@ -50,8 +47,10 @@ struct Face{
 
 ////////////////////////////////
 
-// NOTE(allen): Platform layer calls - implemented in a "font provider"
-typedef Face *Font_Make_Face_Function(Arena *arena, Face_Description *description, f32 scale_factor);
+// The platform layer defines these three.
+Face* font_make_face(Arena* arena, Face_Description* description, f32 scale_factor);
+u32 graphics_get_texture(Vec3_i32 dim, Texture_Kind texture_kind);
+b32 graphics_fill_texture(Texture_Kind texture_kind, u32 texture, Vec3_i32 p, Vec3_i32 dim, void* data);
 
 #endif
 
