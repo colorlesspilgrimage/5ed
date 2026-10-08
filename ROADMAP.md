@@ -110,7 +110,7 @@ Items are roughly in the order intended. Each should leave the tree building and
 - `fkey_command` keeps `,` between `.F1` and `.F2`.
 - Reason: the grammar needs `,` between compound elements.
 - With `;`, every generated project printed `Project errors:`.
-- `git diff --shortstat` shows 19 files changed, 460 insertions, 914 deletions.
+- `git diff --shortstat` shows 19 files changed, 650 insertions, 919 deletions.
 
 ## 6. Platform and rendering
 
