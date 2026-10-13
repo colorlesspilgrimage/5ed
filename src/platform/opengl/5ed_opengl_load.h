@@ -17,120 +17,71 @@
     typedef ret (fiveed_##name##_Function) args; \
     static fiveed_##name##_Function *fiveed_##name = 0
 
-FIVEED_GL_PTR(glDebugMessageControl, void, (GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint *ids, GLboolean enabled));
-FIVEED_GL_PTR(glDebugMessageCallback, void, (GLDEBUGPROC callback, const void *userParam));
-FIVEED_GL_PTR(glGenVertexArrays, void, (GLsizei n, GLuint *arrays));
-FIVEED_GL_PTR(glBindVertexArray, void, (GLuint array));
-FIVEED_GL_PTR(glGenBuffers, void, (GLsizei n, GLuint *buffers));
-FIVEED_GL_PTR(glBindBuffer, void, (GLenum target, GLuint buffer));
-FIVEED_GL_PTR(glBufferData, void, (GLenum target, GLsizeiptr size, const void *data, GLenum usage));
-FIVEED_GL_PTR(glBufferSubData, void, (GLenum target, GLsizeiptr offset, GLsizeiptr size, const void *data));
-FIVEED_GL_PTR(glCreateShader, GLuint, (GLenum type));
-FIVEED_GL_PTR(glShaderSource, void, (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length));
-FIVEED_GL_PTR(glCompileShader, void, (GLuint shader));
-FIVEED_GL_PTR(glGetShaderInfoLog, void, (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog));
-FIVEED_GL_PTR(glDeleteShader, void, (GLuint shader));
-FIVEED_GL_PTR(glCreateProgram, GLuint, (void));
-FIVEED_GL_PTR(glAttachShader, void, (GLuint program, GLuint shader));
-FIVEED_GL_PTR(glLinkProgram, void, (GLuint program));
-FIVEED_GL_PTR(glUseProgram, void, (GLuint program));
-FIVEED_GL_PTR(glGetProgramiv, void, (GLuint program, GLenum pname, GLint *params));
-FIVEED_GL_PTR(glGetProgramInfoLog, void, (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog));
-FIVEED_GL_PTR(glValidateProgram, void, (GLuint program));
-FIVEED_GL_PTR(glGetUniformLocation, GLint, (GLuint program, const GLchar *name));
-FIVEED_GL_PTR(glGetAttribLocation, GLint, (GLuint program, const GLchar *name));
-FIVEED_GL_PTR(glDisableVertexAttribArray, void, (GLuint index));
-FIVEED_GL_PTR(glEnableVertexAttribArray, void, (GLuint index));
-FIVEED_GL_PTR(glVertexAttribPointer, void, (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer));
-FIVEED_GL_PTR(glVertexAttribIPointer, void, (GLuint index, GLint size, GLenum type, GLsizei stride, const void *pointer));
-FIVEED_GL_PTR(glUniform2f, void, (GLint location, GLfloat v0, GLfloat v1));
-FIVEED_GL_PTR(glUniformMatrix2fv, void, (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value));
-FIVEED_GL_PTR(glUniform1i, void, (GLint location, GLint v0));
+#define FIVEED_GL_OPTIONAL(M) \
+    M(glDebugMessageControl, void, (GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint *ids, GLboolean enabled)); \
+    M(glDebugMessageCallback, void, (GLDEBUGPROC callback, const void *userParam));
 
+#define FIVEED_GL_REQUIRED(M) \
+    M(glGenVertexArrays, void, (GLsizei n, GLuint *arrays)); \
+    M(glBindVertexArray, void, (GLuint array)); \
+    M(glGenBuffers, void, (GLsizei n, GLuint *buffers)); \
+    M(glBindBuffer, void, (GLenum target, GLuint buffer)); \
+    M(glBufferData, void, (GLenum target, GLsizeiptr size, const void *data, GLenum usage)); \
+    M(glBufferSubData, void, (GLenum target, GLsizeiptr offset, GLsizeiptr size, const void *data)); \
+    M(glCreateShader, GLuint, (GLenum type)); \
+    M(glShaderSource, void, (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length)); \
+    M(glCompileShader, void, (GLuint shader)); \
+    M(glGetShaderInfoLog, void, (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog)); \
+    M(glDeleteShader, void, (GLuint shader)); \
+    M(glCreateProgram, GLuint, (void)); \
+    M(glAttachShader, void, (GLuint program, GLuint shader)); \
+    M(glLinkProgram, void, (GLuint program)); \
+    M(glUseProgram, void, (GLuint program)); \
+    M(glGetProgramiv, void, (GLuint program, GLenum pname, GLint *params)); \
+    M(glGetProgramInfoLog, void, (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog)); \
+    M(glValidateProgram, void, (GLuint program)); \
+    M(glGetUniformLocation, GLint, (GLuint program, const GLchar *name)); \
+    M(glGetAttribLocation, GLint, (GLuint program, const GLchar *name)); \
+    M(glDisableVertexAttribArray, void, (GLuint index)); \
+    M(glEnableVertexAttribArray, void, (GLuint index)); \
+    M(glVertexAttribPointer, void, (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer)); \
+    M(glVertexAttribIPointer, void, (GLuint index, GLint size, GLenum type, GLsizei stride, const void *pointer)); \
+    M(glUniform2f, void, (GLint location, GLfloat v0, GLfloat v1)); \
+    M(glUniformMatrix2fv, void, (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)); \
+    M(glUniform1i, void, (GLint location, GLint v0));
+
+FIVEED_GL_OPTIONAL(FIVEED_GL_PTR)
+FIVEED_GL_REQUIRED(FIVEED_GL_PTR)
 #undef FIVEED_GL_PTR
 
-#define FIVEED_LOAD_REQUIRED(name) \
+#define FIVEED_LOAD_REQUIRED(name, ret, args) \
     fiveed_##name = (fiveed_##name##_Function *)glXGetProcAddressARB((const GLubyte *)#name); \
     if (fiveed_##name == 0){ return false; }
 
-#define FIVEED_LOAD_OPTIONAL(name) \
+#define FIVEED_LOAD_OPTIONAL(name, ret, args) \
     fiveed_##name = (fiveed_##name##_Function *)glXGetProcAddressARB((const GLubyte *)#name)
 
-// Load each entry point. Call this only after glXMakeCurrent.
-// A null optional pointer is valid. This function does not exit.
+// Call this only after glXMakeCurrent. A null optional pointer is valid.
 internal b32
 linux_gl_load_procs(void){
-    FIVEED_LOAD_REQUIRED(glGenVertexArrays);
-    FIVEED_LOAD_REQUIRED(glBindVertexArray);
-    FIVEED_LOAD_REQUIRED(glGenBuffers);
-    FIVEED_LOAD_REQUIRED(glBindBuffer);
-    FIVEED_LOAD_REQUIRED(glBufferData);
-    FIVEED_LOAD_REQUIRED(glBufferSubData);
-    FIVEED_LOAD_REQUIRED(glCreateShader);
-    FIVEED_LOAD_REQUIRED(glShaderSource);
-    FIVEED_LOAD_REQUIRED(glCompileShader);
-    FIVEED_LOAD_REQUIRED(glGetShaderInfoLog);
-    FIVEED_LOAD_REQUIRED(glDeleteShader);
-    FIVEED_LOAD_REQUIRED(glCreateProgram);
-    FIVEED_LOAD_REQUIRED(glAttachShader);
-    FIVEED_LOAD_REQUIRED(glLinkProgram);
-    FIVEED_LOAD_REQUIRED(glUseProgram);
-    FIVEED_LOAD_REQUIRED(glGetProgramiv);
-    FIVEED_LOAD_REQUIRED(glGetProgramInfoLog);
-    FIVEED_LOAD_REQUIRED(glValidateProgram);
-    FIVEED_LOAD_REQUIRED(glGetUniformLocation);
-    FIVEED_LOAD_REQUIRED(glGetAttribLocation);
-    FIVEED_LOAD_REQUIRED(glDisableVertexAttribArray);
-    FIVEED_LOAD_REQUIRED(glEnableVertexAttribArray);
-    FIVEED_LOAD_REQUIRED(glVertexAttribPointer);
-    FIVEED_LOAD_REQUIRED(glVertexAttribIPointer);
-    FIVEED_LOAD_REQUIRED(glUniform2f);
-    FIVEED_LOAD_REQUIRED(glUniformMatrix2fv);
-    FIVEED_LOAD_REQUIRED(glUniform1i);
-    FIVEED_LOAD_OPTIONAL(glDebugMessageControl);
-    FIVEED_LOAD_OPTIONAL(glDebugMessageCallback);
+    FIVEED_GL_REQUIRED(FIVEED_LOAD_REQUIRED);
+    FIVEED_GL_OPTIONAL(FIVEED_LOAD_OPTIONAL);
     return true;
 }
 
 #undef FIVEED_LOAD_REQUIRED
 #undef FIVEED_LOAD_OPTIONAL
 
-// Drop every loaded pointer. Call this when context creation fails.
 // A later draw must not call a pointer for a destroyed context.
+#define FIVEED_CLEAR(name, ret, args) fiveed_##name = 0
+
 internal void
 linux_gl_clear_procs(void){
-#define FIVEED_CLEAR(name) fiveed_##name = 0
-    FIVEED_CLEAR(glDebugMessageControl);
-    FIVEED_CLEAR(glDebugMessageCallback);
-    FIVEED_CLEAR(glGenVertexArrays);
-    FIVEED_CLEAR(glBindVertexArray);
-    FIVEED_CLEAR(glGenBuffers);
-    FIVEED_CLEAR(glBindBuffer);
-    FIVEED_CLEAR(glBufferData);
-    FIVEED_CLEAR(glBufferSubData);
-    FIVEED_CLEAR(glCreateShader);
-    FIVEED_CLEAR(glShaderSource);
-    FIVEED_CLEAR(glCompileShader);
-    FIVEED_CLEAR(glGetShaderInfoLog);
-    FIVEED_CLEAR(glDeleteShader);
-    FIVEED_CLEAR(glCreateProgram);
-    FIVEED_CLEAR(glAttachShader);
-    FIVEED_CLEAR(glLinkProgram);
-    FIVEED_CLEAR(glUseProgram);
-    FIVEED_CLEAR(glGetProgramiv);
-    FIVEED_CLEAR(glGetProgramInfoLog);
-    FIVEED_CLEAR(glValidateProgram);
-    FIVEED_CLEAR(glGetUniformLocation);
-    FIVEED_CLEAR(glGetAttribLocation);
-    FIVEED_CLEAR(glDisableVertexAttribArray);
-    FIVEED_CLEAR(glEnableVertexAttribArray);
-    FIVEED_CLEAR(glVertexAttribPointer);
-    FIVEED_CLEAR(glVertexAttribIPointer);
-    FIVEED_CLEAR(glUniform2f);
-    FIVEED_CLEAR(glUniformMatrix2fv);
-    FIVEED_CLEAR(glUniform1i);
-#undef FIVEED_CLEAR
+    FIVEED_GL_OPTIONAL(FIVEED_CLEAR);
+    FIVEED_GL_REQUIRED(FIVEED_CLEAR);
 }
+
+#undef FIVEED_CLEAR
 
 #define glDebugMessageControl fiveed_glDebugMessageControl
 #define glDebugMessageCallback fiveed_glDebugMessageCallback
