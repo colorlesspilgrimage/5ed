@@ -1,9 +1,7 @@
 /*
  * OpenGL context attributes for 5ed.
  *
- * The list requests an OpenGL 3.3 core context.
- * The caller does not free the pointer.
- * The function has no side effect.
+ * The caller does not free this static list.
  */
 
 #ifndef FIVEED_OPENGL_CONTEXT_H
@@ -11,7 +9,6 @@
 
 #include <GL/glx.h>
 
-// Return the GLX attribute list. The array has 7 ints. It ends with 0.
 inline const int *
 opengl_context_attrib_list(void){
     static const int attribs[7] = {

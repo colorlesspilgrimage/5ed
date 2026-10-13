@@ -2,9 +2,6 @@
  * OpenGL context failure cleanup for 5ed.
  *
  * Call this after context creation fails.
- * The function restores the X error handler.
- * The function releases a current context before it destroys that context.
- * A null display skips GLX calls.
  * The function does not call exit.
  */
 

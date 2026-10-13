@@ -98,8 +98,6 @@ target_compile_options(5ed PRIVATE -fno-threadsafe-statics)
 target_link_libraries(5ed PRIVATE 5ed_core 5ed_custom 5ed_common 5ed_base
     X11::X11 X11::Xfixes OpenGL::GL Freetype::Freetype ${CMAKE_DL_LIBS} m rt)
 
-# Release uses IPO.
-
 ################################################################################
 # Runtime files (fonts, themes, default config and bindings) beside the binary.
 

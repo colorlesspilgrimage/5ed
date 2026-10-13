@@ -87,72 +87,26 @@ reset_calls(void){
 }
 
 // Point every loaded entry at a bad address. Clear must set each one to null.
+#define FIVEED_ARM(name, ret, args) fiveed_##name = (fiveed_##name##_Function *)1;
+
 static void
 arm_pointers(void){
-    fiveed_glDebugMessageControl = (fiveed_glDebugMessageControl_Function *)1;
-    fiveed_glDebugMessageCallback = (fiveed_glDebugMessageCallback_Function *)1;
-    fiveed_glGenVertexArrays = (fiveed_glGenVertexArrays_Function *)1;
-    fiveed_glBindVertexArray = (fiveed_glBindVertexArray_Function *)1;
-    fiveed_glGenBuffers = (fiveed_glGenBuffers_Function *)1;
-    fiveed_glBindBuffer = (fiveed_glBindBuffer_Function *)1;
-    fiveed_glBufferData = (fiveed_glBufferData_Function *)1;
-    fiveed_glBufferSubData = (fiveed_glBufferSubData_Function *)1;
-    fiveed_glCreateShader = (fiveed_glCreateShader_Function *)1;
-    fiveed_glShaderSource = (fiveed_glShaderSource_Function *)1;
-    fiveed_glCompileShader = (fiveed_glCompileShader_Function *)1;
-    fiveed_glGetShaderInfoLog = (fiveed_glGetShaderInfoLog_Function *)1;
-    fiveed_glDeleteShader = (fiveed_glDeleteShader_Function *)1;
-    fiveed_glCreateProgram = (fiveed_glCreateProgram_Function *)1;
-    fiveed_glAttachShader = (fiveed_glAttachShader_Function *)1;
-    fiveed_glLinkProgram = (fiveed_glLinkProgram_Function *)1;
-    fiveed_glUseProgram = (fiveed_glUseProgram_Function *)1;
-    fiveed_glGetProgramiv = (fiveed_glGetProgramiv_Function *)1;
-    fiveed_glGetProgramInfoLog = (fiveed_glGetProgramInfoLog_Function *)1;
-    fiveed_glValidateProgram = (fiveed_glValidateProgram_Function *)1;
-    fiveed_glGetUniformLocation = (fiveed_glGetUniformLocation_Function *)1;
-    fiveed_glGetAttribLocation = (fiveed_glGetAttribLocation_Function *)1;
-    fiveed_glDisableVertexAttribArray = (fiveed_glDisableVertexAttribArray_Function *)1;
-    fiveed_glEnableVertexAttribArray = (fiveed_glEnableVertexAttribArray_Function *)1;
-    fiveed_glVertexAttribPointer = (fiveed_glVertexAttribPointer_Function *)1;
-    fiveed_glVertexAttribIPointer = (fiveed_glVertexAttribIPointer_Function *)1;
-    fiveed_glUniform2f = (fiveed_glUniform2f_Function *)1;
-    fiveed_glUniformMatrix2fv = (fiveed_glUniformMatrix2fv_Function *)1;
-    fiveed_glUniform1i = (fiveed_glUniform1i_Function *)1;
+    FIVEED_GL_OPTIONAL(FIVEED_ARM);
+    FIVEED_GL_REQUIRED(FIVEED_ARM);
 }
+
+#undef FIVEED_ARM
+
+#define FIVEED_STILL_SET(name, ret, args) if (fiveed_##name != 0){ return 0; }
 
 static int
 pointers_are_clear(void){
-    if (fiveed_glDebugMessageControl != 0){ return 0; }
-    if (fiveed_glDebugMessageCallback != 0){ return 0; }
-    if (fiveed_glGenVertexArrays != 0){ return 0; }
-    if (fiveed_glBindVertexArray != 0){ return 0; }
-    if (fiveed_glGenBuffers != 0){ return 0; }
-    if (fiveed_glBindBuffer != 0){ return 0; }
-    if (fiveed_glBufferData != 0){ return 0; }
-    if (fiveed_glBufferSubData != 0){ return 0; }
-    if (fiveed_glCreateShader != 0){ return 0; }
-    if (fiveed_glShaderSource != 0){ return 0; }
-    if (fiveed_glCompileShader != 0){ return 0; }
-    if (fiveed_glGetShaderInfoLog != 0){ return 0; }
-    if (fiveed_glDeleteShader != 0){ return 0; }
-    if (fiveed_glCreateProgram != 0){ return 0; }
-    if (fiveed_glAttachShader != 0){ return 0; }
-    if (fiveed_glLinkProgram != 0){ return 0; }
-    if (fiveed_glUseProgram != 0){ return 0; }
-    if (fiveed_glGetProgramiv != 0){ return 0; }
-    if (fiveed_glGetProgramInfoLog != 0){ return 0; }
-    if (fiveed_glValidateProgram != 0){ return 0; }
-    if (fiveed_glGetUniformLocation != 0){ return 0; }
-    if (fiveed_glGetAttribLocation != 0){ return 0; }
-    if (fiveed_glDisableVertexAttribArray != 0){ return 0; }
-    if (fiveed_glEnableVertexAttribArray != 0){ return 0; }
-    if (fiveed_glVertexAttribPointer != 0){ return 0; }
-    if (fiveed_glVertexAttribIPointer != 0){ return 0; }
-    if (fiveed_glUniform2f != 0){ return 0; }
-    if (fiveed_glUniformMatrix2fv != 0){ return 0; }
-    if (fiveed_glUniform1i != 0){ return 0; }
+    FIVEED_GL_OPTIONAL(FIVEED_STILL_SET);
+    FIVEED_GL_REQUIRED(FIVEED_STILL_SET);
     return 1;
 }
+
+#undef FIVEED_STILL_SET
 
 int
 main(void){
