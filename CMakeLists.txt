@@ -191,8 +191,13 @@ add_custom_target(check-security
 add_executable(test_opengl_context EXCLUDE_FROM_ALL
     src/platform/linux/tests/5ed_gl_context_attribs_test.cpp)
 target_link_libraries(test_opengl_context PRIVATE 5ed_common X11::X11 OpenGL::GL)
+add_executable(test_glx_fail EXCLUDE_FROM_ALL
+    src/platform/linux/tests/5ed_glx_fail_test.cpp)
+target_link_libraries(test_glx_fail PRIVATE 5ed_common X11::X11 OpenGL::GL)
 add_custom_target(check-opengl
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-opengl.sh ${PROJECT_SOURCE_DIR}
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/test-check-opengl.sh ${PROJECT_SOURCE_DIR}
     COMMAND test_opengl_context
-    DEPENDS test_opengl_context
+    COMMAND test_glx_fail
+    DEPENDS test_opengl_context test_glx_fail
     VERBATIM)
