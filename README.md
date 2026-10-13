@@ -12,7 +12,7 @@ Requires GCC (g++), CMake 3.20+, and the X11, Xfixes, OpenGL (GLX) and FreeType 
     cmake --build build -j
     ./build/5ed
 
-Release does not use link-time optimization. A Release IPO trial printed 57 warnings. Each warning says that an OpenGL symbol changed type. The build stays without those warnings. See ROADMAP item 3.
+Release uses IPO. The OpenGL entry points are static pointers. A pointer name is not the OpenGL name. See ROADMAP item 6.
 
 The build writes one executable, `build/5ed`. It also copies `ship_files/` beside that executable. The copy holds fonts, themes, default config and bindings. The build does not write a core library or a custom library. The configure step removes these old libraries from an old build folder. The command table is the list `src/custom/5ed_command_list.h`.
 

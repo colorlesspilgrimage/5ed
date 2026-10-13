@@ -21,6 +21,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Release uses IPO. Debug does not use IPO.
+include(CheckIPOSupported)
+check_ipo_supported(RESULT fiveed_ipo_supported OUTPUT fiveed_ipo_error)
+if(fiveed_ipo_supported)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+endif()
+
 # Put the executable in the build directory.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -90,9 +97,6 @@ add_executable(5ed src/platform/linux/linux_5ed.cpp)
 target_compile_options(5ed PRIVATE -fno-threadsafe-statics)
 target_link_libraries(5ed PRIVATE 5ed_core 5ed_custom 5ed_common 5ed_base
     X11::X11 X11::Xfixes OpenGL::GL Freetype::Freetype ${CMAKE_DL_LIBS} m rt)
-
-# Release does not use link-time optimization.
-# IPO warns about OpenGL function pointer types. See ROADMAP item 3 and item 6.
 
 ################################################################################
 # Runtime files (fonts, themes, default config and bindings) beside the binary.
@@ -179,4 +183,19 @@ add_custom_target(check-command-line
 add_custom_target(check-security
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-security.sh ${PROJECT_SOURCE_DIR} ${CMAKE_BINARY_DIR}
     DEPENDS 5ed_base 5ed
+    VERBATIM)
+
+# Checks the OpenGL 3.3 core context list and the loader source.
+add_executable(test_opengl_context EXCLUDE_FROM_ALL
+    src/platform/linux/tests/5ed_gl_context_attribs_test.cpp)
+target_link_libraries(test_opengl_context PRIVATE 5ed_common X11::X11 OpenGL::GL)
+add_executable(test_glx_fail EXCLUDE_FROM_ALL
+    src/platform/linux/tests/5ed_glx_fail_test.cpp)
+target_link_libraries(test_glx_fail PRIVATE 5ed_common X11::X11 OpenGL::GL)
+add_custom_target(check-opengl
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/check-opengl.sh ${PROJECT_SOURCE_DIR}
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/test-check-opengl.sh ${PROJECT_SOURCE_DIR}
+    COMMAND test_opengl_context
+    COMMAND test_glx_fail
+    DEPENDS test_opengl_context test_glx_fail
     VERBATIM)
