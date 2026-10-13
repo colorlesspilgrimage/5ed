@@ -120,9 +120,54 @@ Items are roughly in the order intended. Each should leave the tree building and
 - Replace the OpenGL 2.1 compatibility context and `glext` function loading.
 - When `glext` loading is replaced, remove the OpenGL function-pointer warnings so IPO can be on for Release (see item 3). The 2026-10-07 trial kept IPO off. The link printed 57 warnings. Each warning has this form: `warning: type of symbol 'glAttachShader' changed from 2 to 1`. The names are the `GL_FUNC` symbols in `src/platform/opengl/5ed_opengl_funcs.h`.
 - Remove unused system dependencies (`fontconfig` already dropped from the link line).
-- Audio (`platform_linux/linux_5ed_audio.cpp`, ALSA via `dlopen`): keep or remove.
+- Audio: remove it (item 7).
 
-## 7. Quality
+## 7. Remove audio
+
+- Remove all audio code. No ALSA. No `dlopen` of `libasound.so.2`. No audio API.
+- Normal editing writes silence. It never queues a clip.
+- `music_start` and `hit_sfx` are the only calls to `def_audio_play_clip`.
+- They are not bound. The command lister can still run them.
+- They open `audio_test/chtulthu.wav` and `audio_test/hit.wav`. Those files are not in the tree.
+- `music_stop` calls `def_audio_stop`. It is not bound.
+- `src/custom/5ed_tutorial.cpp` has no audio calls. There is no bell.
+- Core has no audio calls.
+- Startup launches the audio thread from `main` in `src/platform/linux/linux_5ed.cpp`.
+- The call is `system_thread_launch(&linux_audio_main, NULL)`. It runs before `app.init`.
+- `linux_audio_main` in `src/platform/linux/linux_5ed_audio.cpp` loads `libasound.so.2`.
+- It opens the PCM name `"default"`.
+- `snd_pcm.hw_params_any` is the first call into `snd_pcm_hw_refine` inside libasound.
+- `snd_pcm.hw_params` calls `snd_pcm_hw_refine` again.
+- `chk` prints a negative code and continues. A crash on that thread kills the process.
+- A null ALSA default device lets refine succeed. Any other default device hit this crash in an earlier test.
+- Delete `src/platform/linux/linux_5ed_audio.cpp`.
+- Delete `src/platform/linux/alsa_funcs.txt`.
+- Drop `#include "platform/linux/linux_5ed_audio.cpp"` from `src/platform/linux/linux_5ed.cpp`.
+- Drop `#include <dlfcn.h>` from that file. The audio thread is the only `dlopen` in the build.
+- Drop `${CMAKE_DL_LIBS}` from the `5ed` link line in `CMakeLists.txt`.
+- There is no `-lasound` link. `alsa/asoundlib.h` is included only by the audio file.
+- In `Linux_Vars`, delete `audio_mutex`, `audio_cond`, `audio_ctx`, `audio_src_func`, `audio_dst_func` and `audio_thread`.
+- In `main`, delete the `audio_mutex` init, the `audio_cond` init, and the `linux_audio_main` launch.
+- `audio_cond` is never waited or signaled.
+- Delete `linux_audio_main`, `linux_submit_audio`, `linux_default_mix_sources` and `linux_default_mix_destination` with the audio file.
+- Delete `system_set_source_mixer` and `system_set_destination_mixer` from `src/platform/linux/linux_5ed_functions.cpp`.
+- Delete the same two stubs from `src/custom/tests/5ed_project_file_stubs.cpp`.
+- Delete their declarations from `src/base/5ed_system_api.h`.
+- Delete `Audio_Mix_Sources_Function` and `Audio_Mix_Destination_Function` from `src/base/5ed_types.h`.
+- Delete `src/custom/5ed_audio.h` and `src/custom/5ed_audio.cpp`.
+- Drop `#include "custom/5ed_audio.h"` and `#include "custom/5ed_audio.cpp"` from `src/custom/5ed_default_include.cpp`.
+- In `default_startup` (`src/custom/5ed_default_hooks.cpp`), delete the `def_audio_init()` call.
+- `default_startup` is bound to `CoreCode_Startup` in `setup_essential_mapping`.
+- `def_audio_init` only calls the two mixer setters. It does not play a clip.
+- Delete these with the custom audio files: `def_audio_init`, `def_audio_play_clip`, `def_audio_is_playing`, `def_audio_stop`, `def_audio_mix_sources`, `def_audio_mix_destination`, `def_audio_begin_ticket_mutex`, `def_audio_end_ticket_mutex`, `audio_clip_from_wav_data`, `audio_clip_from_wav_FILE`, `audio_clip_from_wav_file_name`.
+- `audio_clip_from_wav_file_name` has no caller.
+- Delete `Audio_Control`, `Audio_Clip`, `Audio_System` and `def_audio_system`.
+- In `src/custom/5ed_examples.cpp`, delete `the_music_control`, `music_start`, `music_stop` and `hit_sfx`.
+- The other example commands in that file stay.
+- Drop the three `COMMAND` lines from `src/custom/5ed_command_list.h` (`hit_sfx`, `music_start`, `music_stop`).
+- `scripts/check-commands.sh` checks that list against the command definitions.
+
+## 8. Quality
 
 - Make the build warning-clean under `-Wall -Wextra` (the build currently suppresses several warnings).
 - Run with ASan/UBSan and fix findings.
@@ -131,14 +176,14 @@ Items are roughly in the order intended. Each should leave the tree building and
 - Add `install()` rules and a desktop file once the binary layout settles.
 - CI: build Debug and Release with the current GCC.
 
-## 8. Housekeeping
+## 9. Housekeeping
 
 - Trim `ship_files/themes` and `UPSTREAM_CHANGES.txt` as wanted.
 - Replace the tutorial content (`5ed_tutorial.cpp`, still the Handmade Seattle demo) or remove it.
 - Rename `FCODER_*` include guards.
 - Add a copyright line for 5ed contributors to `LICENSE` if wanted.
 
-## 9. Open an OMP session from a hotkey
+## 10. Open an OMP session from a hotkey
 
 - Support binding a hotkey that opens an OMP session in a pane.
 - The hotkey is user-bindable with the other key bindings (`.5ed` bindings, `ship_files/bindings.5ed`).
