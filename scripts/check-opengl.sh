@@ -20,19 +20,20 @@ fail() {
     exit 1
 }
 
-if grep -R -q -F -- "GL_FUNC" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
+# -r does not follow a symbolic link inside the tree.
+if grep -r -q -F -- "GL_FUNC" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
     fail "GL_FUNC"
 fi
 
-if grep -R -q -F -- "GL/glext.h" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
+if grep -r -q -F -- "GL/glext.h" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
     fail "GL/glext.h"
 fi
 
-if grep -R -q -F -- "GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
+if grep -r -q -F -- "GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
     fail "GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB"
 fi
 
-if grep -R -q -F -- "#version 130" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
+if grep -r -q -F -- "#version 130" "$ROOT/src" "$ROOT/CMakeLists.txt"; then
     fail "#version 130"
 fi
 

@@ -95,6 +95,43 @@ linux_gl_load_procs(void){
 #undef FIVEED_LOAD_REQUIRED
 #undef FIVEED_LOAD_OPTIONAL
 
+// Drop every loaded pointer. Call this when context creation fails.
+// A later draw must not call a pointer for a destroyed context.
+internal void
+linux_gl_clear_procs(void){
+#define FIVEED_CLEAR(name) fiveed_##name = 0
+    FIVEED_CLEAR(glDebugMessageControl);
+    FIVEED_CLEAR(glDebugMessageCallback);
+    FIVEED_CLEAR(glGenVertexArrays);
+    FIVEED_CLEAR(glBindVertexArray);
+    FIVEED_CLEAR(glGenBuffers);
+    FIVEED_CLEAR(glBindBuffer);
+    FIVEED_CLEAR(glBufferData);
+    FIVEED_CLEAR(glBufferSubData);
+    FIVEED_CLEAR(glCreateShader);
+    FIVEED_CLEAR(glShaderSource);
+    FIVEED_CLEAR(glCompileShader);
+    FIVEED_CLEAR(glGetShaderInfoLog);
+    FIVEED_CLEAR(glDeleteShader);
+    FIVEED_CLEAR(glCreateProgram);
+    FIVEED_CLEAR(glAttachShader);
+    FIVEED_CLEAR(glLinkProgram);
+    FIVEED_CLEAR(glUseProgram);
+    FIVEED_CLEAR(glGetProgramiv);
+    FIVEED_CLEAR(glGetProgramInfoLog);
+    FIVEED_CLEAR(glValidateProgram);
+    FIVEED_CLEAR(glGetUniformLocation);
+    FIVEED_CLEAR(glGetAttribLocation);
+    FIVEED_CLEAR(glDisableVertexAttribArray);
+    FIVEED_CLEAR(glEnableVertexAttribArray);
+    FIVEED_CLEAR(glVertexAttribPointer);
+    FIVEED_CLEAR(glVertexAttribIPointer);
+    FIVEED_CLEAR(glUniform2f);
+    FIVEED_CLEAR(glUniformMatrix2fv);
+    FIVEED_CLEAR(glUniform1i);
+#undef FIVEED_CLEAR
+}
+
 #define glDebugMessageControl fiveed_glDebugMessageControl
 #define glDebugMessageCallback fiveed_glDebugMessageCallback
 #define glGenVertexArrays fiveed_glGenVertexArrays

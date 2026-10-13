@@ -80,6 +80,7 @@
 
 #include <GL/glx.h>
 #include "platform/opengl/5ed_opengl_context.h"
+#include "platform/opengl/5ed_opengl_fail.h"
 
 #ifdef INSO_DEBUG
 #define LINUX_FN_DEBUG(fmt, ...) do { \
@@ -653,6 +654,16 @@ typedef int        (glXSwapIntervalMESA_Function)       (unsigned int interval);
 typedef int        (glXGetSwapIntervalMESA_Function)    (void);
 typedef int        (glXSwapIntervalSGI_Function)        (int interval);
 
+internal Bool
+glx_make_current_proc(Display *dpy, GLXDrawable drawable, GLXContext ctx){
+    return glXMakeCurrent(dpy, drawable, ctx);
+}
+
+internal void
+glx_destroy_context_proc(Display *dpy, GLXContext ctx){
+    glXDestroyContext(dpy, ctx);
+}
+
 internal b32
 glx_create_context(GLXFBConfig fb_config){
     const char *glx_exts = glXQueryExtensionsString(linuxvars.dpy, DefaultScreen(linuxvars.dpy));
@@ -672,11 +683,15 @@ glx_create_context(GLXFBConfig fb_config){
     }
     
     int (*old_handler)(Display*, XErrorEvent*) = XSetErrorHandler(&glx_error_handler);
+    // A stale flag must not fail this attempt.
+    glx_ctx_error = false;
     GLXContext ctx = glXCreateContextAttribsARB(linuxvars.dpy, fb_config, 0, True,
                                                  opengl_context_attrib_list());
     
     XSync(linuxvars.dpy, False);
     if (glx_ctx_error || ctx == 0){
+        glx_fail_cleanup(linuxvars.dpy, old_handler, ctx, 0,
+                         glx_make_current_proc, glx_destroy_context_proc);
         return false;
     }
     
@@ -684,9 +699,16 @@ glx_create_context(GLXFBConfig fb_config){
     XSetErrorHandler(old_handler);
     
     if (!glXMakeCurrent(linuxvars.dpy, linuxvars.win, ctx)){
+        XSetErrorHandler(&glx_error_handler);
+        glx_fail_cleanup(linuxvars.dpy, old_handler, ctx, 0,
+                         glx_make_current_proc, glx_destroy_context_proc);
         return false;
     }
     if (!linux_gl_load_procs()){
+        linux_gl_clear_procs();
+        XSetErrorHandler(&glx_error_handler);
+        glx_fail_cleanup(linuxvars.dpy, old_handler, ctx, 1,
+                         glx_make_current_proc, glx_destroy_context_proc);
         return false;
     }
     

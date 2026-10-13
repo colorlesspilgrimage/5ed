@@ -25,8 +25,11 @@ Code and tests:
 
 src/platform/opengl/5ed_opengl_context.h
 src/platform/opengl/5ed_opengl_load.h
+src/platform/opengl/5ed_opengl_fail.h
 src/platform/opengl/5ed_opengl_render.cpp
 src/platform/linux/linux_5ed.cpp
 src/platform/linux/tests/5ed_gl_context_attribs_test.cpp
+src/platform/linux/tests/5ed_glx_fail_test.cpp
 scripts/check-opengl.sh
 scripts/check-release-link.sh
+scripts/test-check-opengl.sh
