@@ -79,7 +79,7 @@
 #define internal static
 
 #include <GL/glx.h>
-#include <GL/glext.h>
+#include "platform/opengl/5ed_opengl_context.h"
 
 #ifdef INSO_DEBUG
 #define LINUX_FN_DEBUG(fmt, ...) do { \
@@ -550,8 +550,7 @@ os_popup_error(char *title, char *message){
 
 #include <GL/gl.h>
 #include "platform/opengl/5ed_opengl_defines.h"
-#define GL_FUNC(N,R,P) typedef R (N##_Function)P; N##_Function *N = 0;
-#include "platform/opengl/5ed_opengl_funcs.h"
+#include "platform/opengl/5ed_opengl_load.h"
 #include "platform/opengl/5ed_opengl_render.cpp"
 
 u32
@@ -666,44 +665,30 @@ glx_create_context(GLXFBConfig fb_config){
     
 #define GLXLOAD(f) f = (f##_Function*) glXGetProcAddressARB((const GLubyte*) #f);
     GLXLOAD(glXCreateContextAttribsARB);
+#undef GLXLOAD
     
-    GLXContext ctx = NULL;
-    int (*old_handler)(Display*, XErrorEvent*) = XSetErrorHandler(&glx_error_handler);
-    
-    if (glXCreateContextAttribsARB == NULL){
-        //LOG("glXCreateContextAttribsARB() not found, using old-style GLX context\n" );
-        ctx = glXCreateNewContext(linuxvars.dpy, fb_config, GLX_RGBA_TYPE, 0, True);
-    } else {
-        static const int context_attribs[] = {
-            GLX_CONTEXT_MAJOR_VERSION_ARB, 2,
-            GLX_CONTEXT_MINOR_VERSION_ARB, 1,
-            GLX_CONTEXT_PROFILE_MASK_ARB , GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
-#if GL_DEBUG_MODE
-            GLX_CONTEXT_FLAGS_ARB        , GLX_CONTEXT_DEBUG_BIT_ARB,
-#endif
-            None
-        };
-        
-        //LOG("Creating GL 2.1 context... ");
-        ctx = glXCreateContextAttribsARB(linuxvars.dpy, fb_config, 0, True, context_attribs);
+    if (glXCreateContextAttribsARB == 0){
+        return false;
     }
     
+    int (*old_handler)(Display*, XErrorEvent*) = XSetErrorHandler(&glx_error_handler);
+    GLXContext ctx = glXCreateContextAttribsARB(linuxvars.dpy, fb_config, 0, True,
+                                                 opengl_context_attrib_list());
+    
     XSync(linuxvars.dpy, False);
-    if(glx_ctx_error || !ctx) {
+    if (glx_ctx_error || ctx == 0){
         return false;
     }
     
     XSync(linuxvars.dpy, False);
     XSetErrorHandler(old_handler);
     
-    
-    glXMakeCurrent(linuxvars.dpy, linuxvars.win, ctx);
-    
-    
-#define GL_FUNC(f,R,P) GLXLOAD(f)
-#include "platform/opengl/5ed_opengl_funcs.h"
-    
-#undef GLXLOAD
+    if (!glXMakeCurrent(linuxvars.dpy, linuxvars.win, ctx)){
+        return false;
+    }
+    if (!linux_gl_load_procs()){
+        return false;
+    }
     
     return true;
 }

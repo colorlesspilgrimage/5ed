@@ -82,12 +82,20 @@ fi
 
 # 4. layout
 layout_ok=1
-for name in custom generated docs platform_linux platform_unix opengl; do
+for name in custom generated platform_linux platform_unix opengl; do
     if [ -e "$name" ]; then
         echo "FAIL: layout still has $name"
         layout_ok=0
     fi
 done
+# The feature map is docs/FEATURES.md. Any other path in docs fails.
+if [ -e docs ]; then
+    extra=$(find docs -mindepth 1 -not -path 'docs/FEATURES.md' -print)
+    if [ ! -f docs/FEATURES.md ] || [ -n "$extra" ]; then
+        echo "FAIL: layout still has docs"
+        layout_ok=0
+    fi
+fi
 if compgen -G "5ed*.cpp" > /dev/null || compgen -G "5ed*.h" > /dev/null; then
     echo "FAIL: layout still has root 5ed sources"
     layout_ok=0

@@ -117,8 +117,11 @@ Items are roughly in the order intended. Each should leave the tree building and
 ## 6. Platform and rendering
 
 - Wayland-native window (currently X11 via XWayland). Needs an alternative to GLX and XIM.
-- Replace the OpenGL 2.1 compatibility context and `glext` function loading.
-- When `glext` loading is replaced, remove the OpenGL function-pointer warnings so IPO can be on for Release (see item 3). The 2026-10-07 trial kept IPO off. The link printed 57 warnings. Each warning has this form: `warning: type of symbol 'glAttachShader' changed from 2 to 1`. The names are the `GL_FUNC` symbols in `src/platform/opengl/5ed_opengl_funcs.h`.
+- The context is OpenGL 3.3 core. The attribute list is in `src/platform/opengl/5ed_opengl_context.h`.
+- The loader is `src/platform/opengl/5ed_opengl_load.h`. Each pointer name starts with `fiveed_`.
+- The 57 link warnings are gone. Release uses IPO.
+- The window path is still X11 and GLX.
+- Wayland, dependency trimming, and audio are unchanged.
 - Remove unused system dependencies (`fontconfig` already dropped from the link line).
 - Audio (`platform_linux/linux_5ed_audio.cpp`, ALSA via `dlopen`): keep or remove.
 
